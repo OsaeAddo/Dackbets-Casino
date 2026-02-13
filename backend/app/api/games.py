@@ -3,6 +3,7 @@ from typing import List, Optional
 import logging
 from datetime import datetime
 
+from app.models import casino_models
 from app.config import settings
 from app.dependencies import get_current_user
 from app.database import db
@@ -11,8 +12,6 @@ from app.schemas import (
     GameHistoryResponse, BetResponse, 
     BetRequest, GameType, Currency
 )
-
-from app.models import casino_models
 
 router = APIRouter(prefix="/games", tags=["Games"])
 
