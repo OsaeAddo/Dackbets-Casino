@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from datetime import datetime
 
@@ -7,7 +7,7 @@ from app.config import settings
 from app.dependencies import get_current_user
 from app.database import db
 from app.models import casino_models
-from app.schemas import *
+from app.schemas import TokenResponse, UserResponse, UserSignUp, UserSignIn
 
 import logging
 
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 security = HTTPBearer()
 
 # Authentication endpoints
-@router.post("/signup", response_model=TokenResponse, tags=["Authentication"])
+@router.post("/signup", response_model=TokenResponse)
 async def signup(user_data: UserSignUp):
     """
     Register a new casino user
@@ -74,7 +74,7 @@ async def signup(user_data: UserSignUp):
             detail=detail
         )
 
-@router.post("/signin", response_model=TokenResponse, tags=["Authentication"])
+@router.post("/signin", response_model=TokenResponse)
 async def signin(user_data: UserSignIn):
     """
     Authenticate user and return tokens
@@ -116,7 +116,7 @@ async def signin(user_data: UserSignIn):
             detail="Invalid credentials"
         )
 
-@router.post("/signout", tags=["Authentication"])
+@router.post("/signout")
 async def signout(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """
     Sign out user (invalidate token on client side)
@@ -125,7 +125,7 @@ async def signout(credentials: HTTPAuthorizationCredentials = Depends(security))
     # This just tells client to remove token
     return {"message": "Signed out successfully"}
     
-@router.get("/me", response_model=UserResponse, tags=["Authentication"])    
+@router.get("/me", response_model=UserResponse)    
 async def get_current_user_info(user = Depends(get_current_user)):
     """
     Get current authenticated user with casino profile
@@ -143,7 +143,7 @@ async def get_current_user_info(user = Depends(get_current_user)):
         wagering_requirement=profile.get('wagering_requirement', 0.0)
     )
         
-# @router.get("/auth/current-user",  tags=["Authentication"])    
+# @router.get("/auth/current-user")    
 # async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
 #     token = credentials.credentials
 #     logger.debug(f"get_current_user called with jwt token: {token[:40]}...")
