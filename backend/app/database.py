@@ -33,10 +33,7 @@ class SupabaseDB:
         
     def sign_out(self, access_token: str):
         return self.client.auth.sign_out({access_token})
-        
-    def get_user(self, access_token: str):
-        return self.client.auth.get_user(access_token)
-    
+            
     def get_user_with_supabase_token(self, supabase_token: str):
         """
         Get user using Supabase's JWT token
