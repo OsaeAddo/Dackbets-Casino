@@ -30,18 +30,21 @@ async def get_current_user_dep(
     supabase_user.created_at = created_at_str    #Optimize later to avoid double DB calls
         
     # Get casino profile
-    profile = await casino_models.get_user_profile(supabase_user.id)
+    profile = await casino_models.get_user_profile(supabase_user.user.id)
     if not profile:
         # Create profile if doesn't exist
-        await casino_models.create_user_profile(supabase_user.id, getattr(supabase_user, 'email', 'unknown'))
-        profile = await casino_models.get_user_profile(supabase_user.id)
+        await casino_models.create_user_profile(
+            supabase_user.user.id, 
+            getattr(supabase_user.user, 'email', 'unknown')
+        )
+        profile = await casino_models.get_user_profile(supabase_user.user.id)
     
     # Attach profile to user object
     # user.profile = profile
     
     return CasinoUser(
-        id=supabase_user.id,
-        email=getattr(supabase_user, 'email', ''),
+        id=supabase_user.user.id,
+        email=getattr(supabase_user.user, 'email', ''),
         username=profile.get('username'),
         profile=profile
     )
