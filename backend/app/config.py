@@ -1,44 +1,53 @@
-# app/config.py
 from pydantic_settings import BaseSettings
 from typing import Optional, List
 
 class Settings(BaseSettings):
-    # No need for Config class when dotenv loads variables
-    SUPABASE_URL: str
-    SUPABASE_KEY: str
-    SUPABASE_SERVICE_ROLE_KEY: Optional[str] = None
+    # Supabase
+    supabase_url: str
+    supabase_key: str
+    supabase_service_role_key: Optional[str] = None
     
-    JWT_SECRET_KEY: str
-    JWT_ALGORITHM: str = "HS256"
-    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    # JWT
+    jwt_secret_key: str
+    jwt_algorithm: str = "HS256"
+    jwt_access_token_expire_minutes: int = 1440  # 24 hours for casino
     
-    FRONTEND_URL: str = "http://localhost:5173"
-    DEBUG: bool = True
-    
-    # Tatum settings
-    TATUM_API_KEY: Optional[str] = None
-    TATUM_WEBHOOK_SECRET: Optional[str] = None
+    # CORS
+    frontend_url: str = "http://localhost:5173"
     
     # Casino Settings
-    CASINO_NAME: str = "Crypto Casino"
-    DEFAULT_CURRENCY: str = "USD"
-    SUPPORTED_CRYPTOS: List[str] = ["BTC", "ETH", "USDT", "USDC", "SOL"]
+    casino_name: str = "CryptoCasino"
+    default_currency: str = "USD"
+    supported_cryptos: List[str] = ["BTC", "ETH", "USDT", "USDC", "SOL", "BNB"]
+    
+    # House Edge (in percentage)
+    house_edge_slots: float = 3.0
+    house_edge_dice: float = 1.0
+    house_edge_blackjack: float = 0.5
+    house_edge_roulette: float = 2.7
+    
+    # Betting Limits
+    min_bet_amount: float = 1.0
+    max_bet_amount: float = 10000.0
+    max_daily_loss: float = 5000.0
     
     # Wallet Settings
-    WALLET_MIN_CONFIRMATIONS: dict = {
+    wallet_hot_wallet_percentage: float = 0.1  # 10% in hot wallet
+    wallet_min_confirmations: dict = {
         "BTC": 3,
         "ETH": 12,
         "USDT": 12,
         "USDC": 12,
-        "SOL": 1
+        "SOL": 1,
+        "BNB": 12
     }
-
     
-    # Remove the Config class entirely
-    class Config:
-        # env_file = ".env"  # No longer needed
-        env_file_encoding = 'utf-8'
-        # If you have nested structures in .env, you might need this:
-        case_sensitive = False  # Allows lowercase variable names in .env
+    # Security
+    debug: bool = False
+    require_kyc_for_withdrawal: bool = True
+    withdrawal_daily_limit: float = 10000.0
+    
+    # class Config:
+    #     env_file = ".env"
 
 settings = Settings()
