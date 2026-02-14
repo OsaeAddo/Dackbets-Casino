@@ -1,80 +1,97 @@
-from fastapi import (
-    APIRouter, BackgroundTasks, 
-    Request, HTTPException, BackgroundTasks
-)
-import hmac
-import hashlib
+# app/api/webhooks.py
+from fastapi import APIRouter, Request, BackgroundTasks, HTTPException, status
 import json
-
-from app.schemas import *
-from app.dependencies import get_current_user
-from app.core.tatum_webhook import process_deposit_event
-from app import settings
-
 import logging
+
+from app.core.tatum_webhook import WebhookProcessor, DepositEvent, WebhookProvider
+from app.config import settings
 
 router = APIRouter(prefix="/webhooks", tags=["Webhooks"])
 logger = logging.getLogger(__name__)
 
-# Your Tatum webhook secret (set this in Tatum dashboard)
-TATUM_WEBHOOK_SECRET = settings.tatum_webhook_secret
-
-
-# ============= WEBHOOK ENDPOINTS =============
-
-# @router.post("/blockchain/{currency}")
-# async def blockchain_webhook(
-#     currency: str,
-#     payload: Dict,
-#     background_tasks: BackgroundTasks
-# ):
-#     """Webhook for blockchain deposit notifications"""
-#     # TODO: Implement webhook signature verification
-#     try:
-#         from app.core.tatum_webhook import process_blockchain_webhook
-#         background_tasks.add_task(process_blockchain_webhook, currency, payload)
-#         return {"status": "processing"}
-#     except Exception as e:
-#         logger.error(f"Webhook error: {str(e)}")
-#         return {"status": "error", "message": str(e)}
-    
-
+# Public endpoint for receiving Tatum webhooks (LIVE)
 @router.post("/tatum/deposit")
 async def tatum_deposit_webhook(
     request: Request,
     background_tasks: BackgroundTasks
 ):
-    """
-    Endpoint for Tatum to notify about deposits.
-    Must be set in Tatum Dashboard: https://dashboard.tatum.io/webhooks
-    """
-    # 1. Get the raw body and the signature header
-    body_bytes = await request.body()
-    received_signature = request.headers.get("tatum-signature")
-
-    # 2. Verify the HMAC signature
-    expected_signature = hmac.new(
-        TATUM_WEBHOOK_SECRET.encode(),
-        body_bytes,
-        hashlib.sha512
-    ).hexdigest()
-
-    if not hmac.compare_digest(received_signature, expected_signature):
-        logger.warning("Invalid webhook signature received.")
-        raise HTTPException(status_code=401, detail="Invalid signature")
-
-    # 3. Parse the webhook payload
+    """Receive deposit notifications from Tatum"""
+    
+    # TODO: Add HMAC signature verification here
+    # signature = request.headers.get("tatum-signature")
+    # verify_signature(signature, await request.body())
+    
     try:
-        event = json.loads(body_bytes.decode())
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=400, detail="Invalid JSON")
+        payload = await request.json()
+        logger.debug(f"Tatum webhook received: {payload.get('txId')}")
+        
+        # Convert Tatum payload to standardized event
+        event = DepositEvent(
+            tx_hash=payload.get("txId"),
+            currency=payload.get("asset", "ETH"),
+            amount=float(payload.get("amount", 0)),
+            address=payload.get("address"),
+            confirmations=payload.get("confirmations", 0),
+            provider="tatum"
+        )
+        
+        # Process in background
+        processor = WebhookProcessor(provider=WebhookProvider.TATUM)
+        background_tasks.add_task(processor.process_deposit, event)
+        
+        return {"status": "processing", "tx_id": event.tx_hash}
+        
+    except Exception as e:
+        logger.error(f"Tatum webhook error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
 
-    # 4. Log the raw payload (crucial for debugging)
-    logger.debug(f"Tatum Webhook Received: {event}")
-    # Optional: Save to casino_webhook_logs table here.
+# TESTING ENDPOINTS - Mock webhook simulator
+@router.post("/test/deposit")
+async def test_deposit_webhook(
+    background_tasks: BackgroundTasks,
+    currency: str = "ETH",
+    amount: float = 0.1,
+    address: str = None,
+    confirmations: int = 12
+):
+    """Simulate a deposit webhook for testing"""
+    
+    from app.core.tatum_webhook import MockTatumWebhook
+    
+    processor = WebhookProcessor(provider=WebhookProvider.MOCK)
+    mock = MockTatumWebhook(processor)
+    
+    background_tasks.add_task(
+        mock.simulate_deposit,
+        currency=currency,
+        amount=amount,
+        address=address,
+        confirmations=confirmations
+    )
+    
+    return {
+        "status": "simulating",
+        "message": f"Mock deposit of {amount} {currency} queued"
+    }
 
-    # 5. Process the event in the background
-    background_tasks.add_task(process_deposit_event, event)
-    return {"status": "processing"}
-
-
+@router.get("/test/last")
+async def get_last_test_deposit():
+    """Helper to quickly test with fixed values"""
+    
+    from app.core.tatum_webhook import MockTatumWebhook
+    import asyncio
+    
+    processor = WebhookProcessor(provider=WebhookProvider.MOCK)
+    mock = MockTatumWebhook(processor)
+    
+    # Simulate deposit and wait for result
+    result = await mock.simulate_deposit(
+        currency="ETH",
+        amount=0.05,
+        confirmations=12
+    )
+    
+    return result
