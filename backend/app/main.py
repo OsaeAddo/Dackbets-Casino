@@ -48,22 +48,6 @@ app.include_router(api_router)
 @app.get("/", tags=["Health"])
 async def root():
     return {"message": "Crypto Casino API is live!"}
-
-@app.get("/protected-test", tags=["Authentication"])
-async def protected_test(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
-):
-    """
-    Test endpoint that requires authentication
-    """
-    token = credentials.credentials
-    user = await auth_service.get_current_user(token)
-    
-    return {
-        "message": "You have accessed a protected route!",
-        "user_id": user.id,
-        "email": user.email
-    }
     
 # Error handlers
 @app.exception_handler(HTTPException)
