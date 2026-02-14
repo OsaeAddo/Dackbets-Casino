@@ -1,10 +1,13 @@
 import uuid
 from datetime import datetime, timedelta
-from typing import Optional, Dict, List
-import logging
+from typing import Dict, List
+from supabase import create_client
+# from tatum_sdk_python import TatumSDK, Network
+
 from app.config import settings
 from app.models import casino_models
-from supabase import create_client
+
+import logging
 
 logger = logging.getLogger(__name__)
 
@@ -15,12 +18,12 @@ class WalletService:
     async def get_or_create_wallet(self, user_id: str, currency: str) -> Dict:
         """Get existing wallet or create new one"""
         try:
-            # Check if wallet exists
             response = self.client.table("casino_wallets").select("*").eq(
                 "user_id", user_id
             ).eq("currency", currency).execute()
             
             if response.data:
+                logger.debug(f"Found the existing wallet: {response} \n with type: {type(response)}")
                 return response.data[0]
             
             # Create new wallet
@@ -131,6 +134,7 @@ class WalletService:
             response = self.client.table("casino_transactions").select("*").eq(
                 "user_id", user_id
             ).order("created_at", desc=True).limit(limit).offset(offset).execute()
+            logger.debug(f"Fetched transactions: {response.data}")
             
             return response.data
         except Exception as e:
