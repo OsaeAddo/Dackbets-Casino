@@ -1,10 +1,14 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from jose import JWTError, jwt
 from fastapi import HTTPException, status
+import logging
+
 from app.config import settings
 from app.schemas import TokenData
 from app.database import db
+
+logger = logging.getLogger(__name__)
 
 class AuthService:
     @staticmethod
