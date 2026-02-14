@@ -62,22 +62,52 @@ class AuthService:
             )
     
     @staticmethod
-    async def get_current_user(token: str):
-        # Verify JWT token first
-        token_data = AuthService.verify_token(token)
+    async def get_current_user(
+        custom_jwt_token: Optional[str] = None, 
+        supabase_token: Optional[str] = None
+    ):
+        """
+        Get current user using either:
+        1. Supabase token (preferred, more reliable)
+        2. Custom JWT token (fallback)
+        """
+        logger.debug(f"get_current_user called")
         
-        # Then verify with Supabase
+        # Option 1: Try with Supabase token if provided
+        if supabase_token:
+            try:
+                logger.debug("Trying with Supabase token...")
+                user = db.get_user_with_supabase_token(supabase_token)
+                logger.debug(f"Supabase auth user retrieved: {user}")
+                logger.debug(f"Type of user object: {type(user)}")
+                if user:
+                    logger.debug(f"User found via Supabase token: {user.user.id}")
+                    return user
+            except Exception as e:
+                logger.warning(f"Supabase token failed: {str(e)}")
+        
+        # Option 2: Fall back to custom JWT
         try:
-            user = db.get_user(token)
-            if user:
-                return user
-        except Exception:
-            pass
-        
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
+            logger.debug("Falling back to custom JWT...")
+            token_data = AuthService.verify_token(custom_jwt_token)
+            logger.debug("JWT token verified ✅, data:")
+            logger.debug(f"Token Data payload: {token_data}")
+            
+            # Try to get user from Supabase by ID (admin API)
+            try:
+                user = db.get_user_by_id(token_data.user_id)
+                if user:
+                    logger.debug(f"User found via admin API: {user.user.id}")
+                    return user
+            except Exception as e:
+                logger.warning(f"Admin API failed: {str(e)}")
+                        
+        except Exception as e:
+            logger.error(f"All authentication methods failed: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication credentials",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+    
 auth_service = AuthService()
