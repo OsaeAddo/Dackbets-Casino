@@ -5,7 +5,7 @@ from datetime import datetime
 
 from app.models import casino_models
 from app.config import settings
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user_dep
 from app.database import db
 from app.games.dice import DiceGame
 from app.schemas import (
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 async def place_bet(
     bet_request: BetRequest,
     background_tasks: BackgroundTasks,
-    user = Depends(get_current_user)
+    user = Depends(get_current_user_dep)
 ):
     """Place a bet on a game"""
     # Validate bet amount
@@ -118,7 +118,7 @@ async def get_game_history(
     limit: int = 50,
     offset: int = 0,
     game_type: Optional[GameType] = None,
-    user = Depends(get_current_user)
+    user = Depends(get_current_user_dep)
 ):
     """Get user's game history"""
     try:
