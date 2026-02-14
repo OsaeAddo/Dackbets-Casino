@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from datetime import datetime
 
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user_dep
 from app.wallets.service import wallet_service
 from app.config import settings
 from app.schemas import (
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 @router.get("/address/{currency}", response_model=WalletResponse, tags=["Wallet"])
 async def get_deposit_address(
     currency: Currency,
-    user = Depends(get_current_user)
+    user = Depends(get_current_user_dep)
 ):
     """Get deposit address for a currency"""
     
@@ -49,7 +49,7 @@ async def get_deposit_address(
 @router.post("/deposit", response_model=DepositResponse, tags=["Wallet"])
 async def create_deposit(
     deposit_request: DepositRequest,
-    user = Depends(get_current_user)
+    user = Depends(get_current_user_dep)
 ):
     """Create a deposit request"""
     
@@ -78,7 +78,7 @@ async def create_deposit(
 @router.post("/withdraw", response_model=WithdrawalResponse, tags=["Wallet"])
 async def create_withdrawal(
     withdrawal_request: WithdrawalRequest,
-    user = Depends(get_current_user)
+    user = Depends(get_current_user_dep)
 ):
     """Create a withdrawal request"""
     
@@ -119,7 +119,7 @@ async def create_withdrawal(
 async def get_transactions(
     limit: int = 50,
     offset: int = 0,
-    user = Depends(get_current_user)
+    user = Depends(get_current_user_dep)
 ):
     """Get user's transaction history"""
     
@@ -129,7 +129,6 @@ async def get_transactions(
             limit=limit,
             offset=offset
         )
-        logger.debug(f"Transaction History for user {user['id']}: {transactions}")
         return transactions
     except Exception as e:
         logger.error(f"Transactions error: {str(e)}")
