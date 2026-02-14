@@ -4,7 +4,7 @@ from datetime import datetime
 
 from app.auth import auth_service
 from app.config import settings
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user_dep
 from app.database import db
 from app.models import casino_models
 from app.schemas import TokenResponse, UserResponse, UserSignUp, UserSignIn
@@ -126,7 +126,7 @@ async def signout(credentials: HTTPAuthorizationCredentials = Depends(security))
     return {"message": "Signed out successfully"}
     
 @router.get("/me", response_model=UserResponse)    
-async def get_current_user_info(user = Depends(get_current_user)):
+async def get_current_user_info(user = Depends(get_current_user_dep)):
     """
     Get current authenticated user with casino profile
     """    
@@ -142,20 +142,17 @@ async def get_current_user_info(user = Depends(get_current_user)):
         level=profile.get('level', 1),
         wagering_requirement=profile.get('wagering_requirement', 0.0)
     )
-        
-# @router.get("/auth/current-user")    
-# async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
-#     token = credentials.credentials
-#     logger.debug(f"get_current_user called with jwt token: {token[:40]}...")
-#     try:
-#         # Verify the token with Supabase
-#         user = db.get_user(token)
-#         if not user:
-#             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
-#         return user
-#     except Exception:
-#         raise HTTPException(
-#             status_code=status.HTTP_401_UNAUTHORIZED,
-#             detail="Invalid or expired token",
-#         )
-
+    
+@router.get("/protected-test", tags=["Authentication"])
+async def protected_test(
+    user = Depends(get_current_user_dep)
+):
+    """
+    Test endpoint that requires authentication
+    """
+    
+    return {
+        "message": "You have accessed a protected route!",
+        "user_id": user["id"],
+        "email": user.get("email", "")
+    }
