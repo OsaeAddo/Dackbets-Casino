@@ -42,7 +42,7 @@ app.add_middleware(
 security = HTTPBearer()
 
 # Include all API routes
-app.include_router(api_router) 
+app.include_router(api_router, prefix="/api") 
 
 # Health check endpoint
 @app.get("/", tags=["Health"])
