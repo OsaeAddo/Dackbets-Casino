@@ -22,12 +22,17 @@ async def get_current_user_dep(
         supabase_token=x_supabase_token
     )
     
-    # Convert datetime to string
-    created_at_str = supabase_user.created_at
-    if hasattr(created_at_str, 'isoformat'):
-        created_at_str = supabase_user.created_at.isoformat()
-        
-    supabase_user.created_at = created_at_str    #Optimize later to avoid double DB calls
+    # CRITICAL: Check if user exists
+    #TODO: refactor to properly access user properties
+    if not supabase_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials"
+        )
+    
+    # Convert datetime to string if needed
+    if hasattr(supabase_user.user, 'created_at') and hasattr(supabase_user.user.created_at, 'isoformat'):
+        supabase_user.user.created_at = supabase_user.user.created_at.isoformat()
         
     # Get casino profile
     profile = await casino_models.get_user_profile(supabase_user.user.id)
