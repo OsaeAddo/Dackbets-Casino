@@ -6,7 +6,7 @@ from app.schemas import CasinoUser
 
 
 # Dependency to get current user
-async def get_current_user(
+async def get_current_user_dep(
     authorization: str = Header(None),
     x_supabase_token: Optional[str] = Header(None)
 ):
