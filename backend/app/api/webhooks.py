@@ -1,4 +1,5 @@
 # app/api/webhooks.py
+import uuid
 from fastapi import APIRouter, Request, BackgroundTasks, HTTPException, status
 import json
 import logging
@@ -51,31 +52,31 @@ async def tatum_deposit_webhook(
 # TESTING ENDPOINTS - Mock webhook simulator
 @router.post("/test/deposit")
 async def test_deposit_webhook(
-    background_tasks: BackgroundTasks,
-    currency: str = "ETH",
-    amount: float = 0.1,
-    address: str = None,
-    confirmations: int = 12
+    request: Request,
+    background_tasks: BackgroundTasks
 ):
     """Simulate a deposit webhook for testing"""
     
-    from app.core.tatum_webhook import MockTatumWebhook
+    payload = await request.json()
     
-    processor = WebhookProcessor(provider=WebhookProvider.MOCK)
-    mock = MockTatumWebhook(processor)
+    from app.core.tatum_webhook import WebhookProcessor, DepositEvent
     
-    background_tasks.add_task(
-        mock.simulate_deposit,
-        currency=currency,
-        amount=amount,
-        address=address,
-        confirmations=confirmations
+    # Create event from payload
+    event = DepositEvent(
+        tx_hash=payload.get("tx_hash", f"0x{uuid.uuid4().hex[:64]}"),
+        currency=payload.get("currency", "ETH"),
+        amount=float(payload.get("amount", 0)),
+        address=payload.get("address"),
+        confirmations=payload.get("confirmations", 12),
+        provider="mock"
     )
     
-    return {
-        "status": "simulating",
-        "message": f"Mock deposit of {amount} {currency} queued"
-    }
+    processor = WebhookProcessor(provider=WebhookProvider.MOCK)
+    
+    # Process immediately (or in background)
+    result = await processor.process_deposit(event)
+    
+    return result
 
 @router.get("/test/last")
 async def get_last_test_deposit():
