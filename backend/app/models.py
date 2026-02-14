@@ -54,6 +54,13 @@ class CasinoModels:
                 "p_amount": amount
             }
         ).execute()
+        
+    async def update_transaction_status(self, tx_hash: str, status: str):
+        """Update transaction status after confirmation"""
+        return self.client.table("casino_transactions") \
+            .update({"status": status, "updated_at": datetime.utcnow().isoformat()}) \
+            .filter("metadata->>tx_hash", "eq", tx_hash) \
+            .execute()
     
     # Wallets Table
     async def create_wallet(self, user_id: str, currency: str, address: str):
