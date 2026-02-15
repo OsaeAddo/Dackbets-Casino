@@ -115,7 +115,7 @@ class CasinoModels:
             "game_type": game_type,
             "currency": currency,
             "amount": amount,
-            "result": json.dumps(result),
+            "result": result,
             "win_amount": win_amount,
             "timestamp": datetime.utcnow().isoformat()
         }
