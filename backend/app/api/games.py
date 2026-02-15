@@ -68,7 +68,7 @@ async def place_bet(
         
         # Update in database
         await casino_models.update_user_balance(
-            user_id=user.id,
+            user_id=user["id"],
             currency=bet_request.currency.value,
             amount=net_change
         )
