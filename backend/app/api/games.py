@@ -132,13 +132,21 @@ async def get_game_history(
         
         bets = []
         for bet in response.data:
+            # Parse result if it's a string
+            result_data = bet.get("result", {})
+            if isinstance(result_data, str):
+                import json
+                try:
+                    result_data = json.loads(result_data)
+                except json.JSONDecodeError:
+                    result_data = {}
             bets.append(GameHistoryResponse(
                 bet_id=bet.get("id", ""),
                 game_type=GameType(bet.get("game_type", "")),
                 currency=Currency(bet.get("currency", "")),
                 amount=bet.get("amount", 0.0),
                 win_amount=bet.get("win_amount", 0.0),
-                result=bet.get("result", {}),
+                result=result_data,
                 timestamp=bet.get("timestamp", "")
             ))
         
