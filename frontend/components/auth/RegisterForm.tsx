@@ -1,5 +1,3 @@
-// Register Form Component
-// components/auth/RegisterForm.tsx
 'use client';
 
 import { useState } from 'react';
@@ -96,7 +94,7 @@ export default function RegisterForm() {
   };
 
   return (
-    <Card className="w-full max-w-md">
+    <Card className="w-full">
       <CardHeader className="space-y-1">
         <CardTitle className="text-2xl text-center">Create Account</CardTitle>
         <CardDescription className="text-center">
