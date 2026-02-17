@@ -1,0 +1,152 @@
+// 
+'use client';
+
+import { createContext, useContext, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { apiClient } from '@/lib/api/client';
+import { toast } from 'sonner';
+
+interface User {
+  id: string;
+  email: string;
+  username?: string;
+  balance: Record<string, number>;
+  kyc_status?: string;
+  level?: number;
+}
+
+interface AuthContextType {
+  user: User | null;
+  loading: boolean;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  register: (email: string, password: string, username?: string) => Promise<{ success: boolean; error?: string }>;
+  logout: () => void;
+  refreshUser: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+
+  // Check authentication on mount
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  const checkAuth = async () => {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      const response = await apiClient.get('/auth/me');
+      setUser(response.data);
+    } catch (error) {
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('supabase_token');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const refreshUser = async () => {
+    try {
+      const response = await apiClient.get('/auth/me');
+      setUser(response.data);
+    } catch (error) {
+      console.error('Failed to refresh user:', error);
+    }
+  };
+
+  const login = async (email: string, password: string) => {
+    try {
+      const response = await apiClient.post('/auth/signin', { email, password });
+      
+      localStorage.setItem('access_token', response.data.access_token);
+      if (response.data.supabase_token) {
+        localStorage.setItem('supabase_token', response.data.supabase_token);
+      }
+      
+      // Set user from response
+      setUser({
+        id: response.data.user_id,
+        email: response.data.email,
+        username: response.data.username,
+        balance: response.data.balance || {},
+      });
+      
+      toast.success('Logged in successfully!');
+      router.push('/dashboard');
+      return { success: true };
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.detail || 'Login failed';
+      toast.error(errorMsg);
+      return { success: false, error: errorMsg };
+    }
+  };
+
+  const register = async (email: string, password: string, username?: string) => {
+    try {
+      const response = await apiClient.post('/auth/signup', { 
+        email, 
+        password, 
+        username 
+      });
+      
+      localStorage.setItem('access_token', response.data.access_token);
+      if (response.data.supabase_token) {
+        localStorage.setItem('supabase_token', response.data.supabase_token);
+      }
+      
+      setUser({
+        id: response.data.user_id,
+        email: response.data.email,
+        username: response.data.username,
+        balance: response.data.balance || {},
+      });
+      
+      toast.success('Account created successfully!');
+      router.push('/dashboard');
+      return { success: true };
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.detail || 'Registration failed';
+      toast.error(errorMsg);
+      return { success: false, error: errorMsg };
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('supabase_token');
+    setUser(null);
+    router.push('/');
+    toast.success('Logged out successfully');
+  };
+
+  return (
+    <AuthContext.Provider value={{ 
+      user, 
+      loading, 
+      login, 
+      register, 
+      logout,
+      refreshUser 
+    }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+// Custom hook to use auth context
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}
