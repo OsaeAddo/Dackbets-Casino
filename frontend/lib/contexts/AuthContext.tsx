@@ -70,6 +70,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      // Ensure cookie exists (in case it was cleared)
+      setCookie('access_token', token, 7);
+
       const response = await apiClient.get('/auth/me');
       setUser(response.data);
     } catch (error) {
