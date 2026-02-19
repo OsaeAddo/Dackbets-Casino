@@ -88,15 +88,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const refreshUser = async () => {
-    try {
-      const response = await apiClient.get('/auth/me');
-      setUser(response.data);
-    } catch (error) {
-      console.error('Failed to refresh user:', error);
-    }
-  };
-
   const login = async (email: string, password: string) => {
     try {
       const response = await apiClient.post('/auth/signin', { email, password });
@@ -172,6 +163,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     router.push('/');
     toast.success('Logged out successfully');
+  };
+
+  const refreshUser = async () => {
+    try {
+      const response = await apiClient.get('/auth/me');
+      setUser(response.data);
+    } catch (error) {
+      console.error('Failed to refresh user:', error);
+    }
   };
 
   return (
