@@ -105,13 +105,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (response.data.supabase_token) {
         localStorage.setItem('supabase_token', response.data.supabase_token);
       }
+
+      // --->Set the cookie for proxy.ts <---
+      setCookie('access_token', response.data.access_token, 7); // Expires in 7 days
+
+       // 🔥 Immediately fetch full profile
+      const profileResponse = await apiClient.get('/auth/me');
       
-      // Set user from response
+      // Set user state from response
       setUser({
-        id: response.data.user_id,
-        email: response.data.email,
-        username: response.data.username,
-        balance: response.data.balance || {},
+        id: profileResponse.data.user_id,
+        email: profileResponse.data.email,
+        username: profileResponse.data.username,
+        balance: profileResponse.data.balance || {},
       });
       
       toast.success('Logged in successfully!');
