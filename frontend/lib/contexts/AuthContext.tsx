@@ -75,9 +75,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const response = await apiClient.get('/auth/me');
       setUser(response.data);
-    } catch (error) {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('supabase_token');
+    } catch (error:any) {
+      //only clear everything if it's invalid token
+      if (error.response?.status === 401){
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('supabase_token');
+        clearCookie('access_token');
+        setUser(null);
+      }
     } finally {
       setLoading(false);
     }
