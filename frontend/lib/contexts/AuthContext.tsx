@@ -167,7 +167,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('supabase_token');
+    clearCookie('access_token');
     setUser(null);
+
     router.push('/');
     toast.success('Logged out successfully');
   };
