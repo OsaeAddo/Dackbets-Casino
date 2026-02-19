@@ -92,13 +92,11 @@ async def signin(user_data: UserSignIn):
             
             # Get Supabase's JWT token from the session
             supabase_token = session.access_token
-            logger.debug(f"Supabase token from *signin*: {supabase_token}...")
             
             # Create JWT token
             access_token = auth_service.create_access_token(
                 data={"sub": user.id}
             )
-            logger.debug(f"Custom JWT token from *signin*: {access_token[:60]}")
             
             return TokenResponse(
                 access_token=access_token,
@@ -131,7 +129,6 @@ async def get_current_user_info(user = Depends(get_current_user_dep)):
     Get current authenticated user with casino profile
     """    
     profile = user["profile"]
-        
     return UserResponse(
         id=user["id"],
         email=getattr(user, 'email', ''),
