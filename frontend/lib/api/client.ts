@@ -38,6 +38,8 @@ apiClient.interceptors.request.use((config) => {
       config.headers['X-Supabase-Token'] = supabaseToken;
     }
   }
+   // Ensure these headers are always present
+  // config.headers['Accept'] = 'application/json';
   return config;
 });
 
