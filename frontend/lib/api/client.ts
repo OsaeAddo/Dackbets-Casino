@@ -4,6 +4,18 @@ import axios from 'axios';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
+// Helper to clear all auth data
+const clearAuthData = () => {
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('supabase_token');
+  
+  // Clear cookie (set with empty value and immediate expiry)
+  document.cookie = 'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
+  
+  // Optional: Force page reload to reset all state
+  // window.location.href = '/login';
+};
+
 export const apiClient = axios.create({
   baseURL: API_URL,
   headers: {
@@ -34,6 +46,7 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      clearAuthData();
       // Unauthorized - clear token and redirect to login
       if (typeof window !== 'undefined') {
         localStorage.removeItem('access_token');
