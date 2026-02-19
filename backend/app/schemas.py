@@ -22,8 +22,8 @@ class TokenResponse(BaseModel):
     expires_in: int
     user_id: str
     email: str
-    supabase_token: Optional[str] = None  # Supabase's JWT
     username: Optional[str] = None
+    supabase_token: Optional[str] = None  # Supabase's JWT
     balance: Optional[Dict[str, float]] = None
 
 
