@@ -12,12 +12,18 @@ export const apiClient = axios.create({
   withCredentials: true, // Important for CORS with credentials
 });
 
-// Add token to requests if it exists
+// Add request interceptor to ensure proper headers
 apiClient.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    const accessToken = localStorage.getItem('access_token');
+    const supabaseToken = localStorage.getItem('supabase_token');
+
+    if (accessToken) {
+      config.headers.Authorization = `Bearer ${accessToken}`;
+    }
+    // Send supabase token in custom header
+    if (supabaseToken) {
+      config.headers['X-Supabase-Token'] = supabaseToken;
     }
   }
   return config;
