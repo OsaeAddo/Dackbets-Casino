@@ -1,17 +1,21 @@
 // Homepage/Dashboard
 'use client';
 
-import { useAuth } from '@/lib/hooks/useAuth';
+import { useAuth } from '@/lib/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Dice1Icon, WalletIcon, HistoryIcon } from 'lucide-react';
+import { Dice1Icon, WalletIcon, HistoryIcon, Loader2Icon } from 'lucide-react';
 import Link from 'next/link';
 
 export default function DashboardPage() {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <div className="flex justify-center items-center h-64">Loading...</div>;
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <Loader2Icon className="h-8 w-8 animate-spin text-purple-500" />
+      </div>
+    );
   }
 
   const balance = user?.balance || {};
