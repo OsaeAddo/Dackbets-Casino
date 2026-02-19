@@ -46,6 +46,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     checkAuth();
   }, []);
 
+  // Listen for storage events (for multi-tab sync)
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'access_token') {
+        if (!e.newValue) {
+          // Token was removed in another tab
+          setUser(null);
+          clearCookie('access_token');
+        }
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   const checkAuth = async () => {
     try {
       const token = localStorage.getItem('access_token');
