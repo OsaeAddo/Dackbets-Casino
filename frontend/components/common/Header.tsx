@@ -25,26 +25,44 @@ import {
   MenuIcon,
   CoinsIcon
 } from 'lucide-react';
+import { Skeleton } from '../ui/skeleton';
 
 export default function Header() {
-  const { user, logout } = useAuth();
+  const { user, logout, loading } = useAuth();
   const pathname = usePathname();
 
   const [isNavOpen, setIsNavOpen] = useState(false);
 
-    // Update the mobile menu button:
-    <Button 
-    variant="ghost" 
-    size="icon" 
-    className="md:hidden"
-    onClick={() => setIsNavOpen(true)}
-    >
-    <MenuIcon className="h-5 w-5" />
-    </Button>
+  // Update the mobile menu button:
+  <Button 
+  variant="ghost" 
+  size="icon" 
+  className="md:hidden"
+  onClick={() => setIsNavOpen(true)}
+  >
+  <MenuIcon className="h-5 w-5" />
+  </Button>
 
   // Don't show header on auth pages
   if (pathname === '/login' || pathname === '/register') {
     return null;
+  }
+
+  // Show skeleton while loading
+  if (loading) {
+    return (
+      <header className="border-b border-gray-800 bg-gray-950/95 sticky top-0 z-50">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between h-16">
+            <Skeleton className="h-8 w-32" />
+            <div className="flex items-center space-x-4">
+              <Skeleton className="h-8 w-20" />
+              <Skeleton className="h-8 w-20" />
+            </div>
+          </div>
+        </div>
+      </header>
+    );
   }
 
   const getInitials = () => {
