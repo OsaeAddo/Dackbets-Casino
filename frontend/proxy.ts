@@ -12,7 +12,7 @@ export function proxy(request: NextRequest) {
   const isPublicPath = path === '/' || 
                        path === '/login' || 
                        path === '/register' ||
-                       path.startsWith('/games'); // Game pages might be public?
+                       path.startsWith('/games'); 
   
   // Define auth paths (login/register)
   const isAuthPath = path === '/login' || path === '/register';
