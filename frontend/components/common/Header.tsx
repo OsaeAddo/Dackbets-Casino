@@ -33,16 +33,6 @@ export default function Header() {
 
   const [isNavOpen, setIsNavOpen] = useState(false);
 
-  // Update the mobile menu button:
-  <Button 
-  variant="ghost" 
-  size="icon" 
-  className="md:hidden"
-  onClick={() => setIsNavOpen(true)}
-  >
-  <MenuIcon className="h-5 w-5" />
-  </Button>
-
   // Don't show header on auth pages
   if (pathname === '/login' || pathname === '/register') {
     return null;
@@ -91,6 +81,7 @@ export default function Header() {
   };
 
   return (
+    <>
     <header className="border-b border-gray-800 bg-gray-950/95 sticky top-0 z-50 backdrop-blur-sm">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
@@ -193,16 +184,22 @@ export default function Header() {
               </div>
             )}
 
-            {/* Mobile Menu Button - We'll implement later */}
-            <Button variant="ghost" size="icon" className="md:hidden">
+            {/* Mobile Menu Button - Update*/}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="md:hidden" 
+              onClick={() => setIsNavOpen(true)}
+            >
               <MenuIcon className="h-5 w-5" />
             </Button>
           </div>
         </div>
       </div>
     </header>
+    <Navigation isOpen={isNavOpen} onClose={() => setIsNavOpen(false)} />
+    </>
   );
-  <Navigation isOpen={isNavOpen} onClose={() => setIsNavOpen(false)} />
 }
 
 // Helper component for navigation links
