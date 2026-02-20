@@ -134,7 +134,6 @@ class WalletService:
             response = self.client.table("casino_transactions").select("*").eq(
                 "user_id", user_id
             ).order("created_at", desc=True).limit(limit).offset(offset).execute()
-            logger.debug(f"Fetched transactions: {response.data}")
             
             return response.data
         except Exception as e:

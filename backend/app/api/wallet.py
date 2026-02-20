@@ -17,7 +17,7 @@ router = APIRouter(prefix="/wallet", tags=["Wallet"])
 logger = logging.getLogger(__name__)
 
 # ============= WALLET ENDPOINTS =============
-
+#TODO: Add a get_balance endpoint - to reduce db calls from frontend
 @router.get("/address/{currency}", response_model=WalletResponse, tags=["Wallet"])
 async def get_deposit_address(
     currency: Currency,
