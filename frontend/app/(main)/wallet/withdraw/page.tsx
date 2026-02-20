@@ -1,6 +1,7 @@
+// app/(main)/wallet/withdraw/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { apiClient } from '@/lib/api/client';
@@ -14,10 +15,44 @@ import {
   CheckCircleIcon,
   Loader2Icon
 } from 'lucide-react';
+// Import crypto icons
+import { 
+  FaBitcoin, 
+  FaEthereum
+} from 'react-icons/fa';
+import { SiTether } from 'react-icons/si';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+
+// Currency configuration with icons
+const currencyConfig = {
+  ETH: { 
+    icon: FaEthereum, 
+    color: '#627EEA',
+    label: 'Ethereum',
+    symbol: 'Ξ',
+    min: 0.01,
+    network: 'ERC20'
+  },
+  BTC: { 
+    icon: FaBitcoin, 
+    color: '#F7931A',
+    label: 'Bitcoin',
+    symbol: '₿',
+    min: 0.0005,
+    network: 'BTC'
+  },
+  USDT: { 
+    icon: SiTether, 
+    color: '#26A17B',
+    label: 'Tether',
+    symbol: '₮',
+    min: 10,
+    network: 'ERC20'
+  },
+};
 
 export default function WithdrawPage() {
   const { user, refreshUser } = useAuth();
@@ -29,18 +64,18 @@ export default function WithdrawPage() {
   const [withdrawalResult, setWithdrawalResult] = useState<any>(null);
   const [step, setStep] = useState<'form' | 'confirm'>('form');
 
-  const currencies = [
-    { value: 'ETH', label: 'Ethereum', min: 0.01, icon: 'Ξ', network: 'ERC20' },
-    { value: 'BTC', label: 'Bitcoin', min: 0.0005, icon: '₿', network: 'BTC' },
-    { value: 'USDT', label: 'Tether', min: 10, icon: '₮', network: 'ERC20' },
-  ];
+  const currencies = Object.entries(currencyConfig).map(([value, config]) => ({
+    value,
+    ...config
+  }));
 
   const getCurrencyInfo = () => {
-    return currencies.find(c => c.value === selectedCurrency) || currencies[0];
+    return currencyConfig[selectedCurrency as keyof typeof currencyConfig];
   };
 
-  const getBalance = () => {
-    return user?.balance?.[selectedCurrency] || 0;
+  // FIXED: Accept currency parameter
+  const getBalance = (currency: string) => {
+    return user?.balance?.[currency] || 0;
   };
 
   const validateAddress = (addr: string, currency: string) => {
@@ -65,11 +100,11 @@ export default function WithdrawPage() {
     }
 
     if (amountNum < currencyInfo.min) {
-      toast.error(`Minimum withdrawal is ${currencyInfo.icon}${currencyInfo.min}`);
+      toast.error(`Minimum withdrawal is ${currencyInfo.symbol}${currencyInfo.min}`);
       return;
     }
 
-    if (amountNum > getBalance()) {
+    if (amountNum > getBalance(selectedCurrency)) {
       toast.error('Insufficient balance');
       return;
     }
@@ -110,6 +145,9 @@ export default function WithdrawPage() {
     setWithdrawalResult(null);
   };
 
+  const CurrencyIcon = getCurrencyInfo()?.icon;
+  const currentBalance = getBalance(selectedCurrency);
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-2xl">
       {/* Back button */}
@@ -134,25 +172,33 @@ export default function WithdrawPage() {
               <div className="space-y-3">
                 <Label>Select Currency</Label>
                 <RadioGroup value={selectedCurrency} onValueChange={setSelectedCurrency}>
-                  {currencies.map((currency) => (
-                    <div key={currency.value} className="flex items-center space-x-2">
-                      <RadioGroupItem value={currency.value} id={currency.value} />
-                      <Label htmlFor={currency.value} className="flex-1 cursor-pointer">
-                        <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-800/50">
-                          <div>
-                            <span className="font-medium">{currency.label}</span>
-                            <p className="text-sm text-gray-400">
-                              Balance: {currency.icon}{getBalance().toFixed(4)}
-                            </p>
+                  {currencies.map((currency) => {
+                    const Icon = currency.icon;
+                    const balance = getBalance(currency.value); // Get balance for this specific currency
+                    
+                    return (
+                      <div key={currency.value} className="flex items-center space-x-2">
+                        <RadioGroupItem value={currency.value} id={currency.value} />
+                        <Label htmlFor={currency.value} className="flex-1 cursor-pointer">
+                          <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-800/50">
+                            <div className="flex items-center space-x-3">
+                              <Icon className="h-5 w-5" style={{ color: currency.color }} />
+                              <div>
+                                <span className="font-medium">{currency.label}</span>
+                                <p className="text-sm text-gray-400 flex items-center gap-1">
+                                  Balance: {currency.symbol}{balance.toFixed(4)}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-sm text-gray-400">Network</span>
+                              <p className="font-mono text-xs">{currency.network}</p>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <span className="text-sm text-gray-400">Network</span>
-                            <p className="font-mono text-xs">{currency.network}</p>
-                          </div>
-                        </div>
-                      </Label>
-                    </div>
-                  ))}
+                        </Label>
+                      </div>
+                    );
+                  })}
                 </RadioGroup>
               </div>
 
@@ -160,52 +206,50 @@ export default function WithdrawPage() {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <Label htmlFor="amount">Withdrawal Amount</Label>
-                  <span className="text-sm text-gray-400">
-                    Available: {getCurrencyInfo().icon}{getBalance().toFixed(4)}
+                  <span className="text-sm text-gray-400 flex items-center gap-1">
+                    Available: {getCurrencyInfo()?.symbol}{currentBalance.toFixed(4)}
+                    {CurrencyIcon && <CurrencyIcon className="h-3 w-3" style={{ color: getCurrencyInfo()?.color }} />}
                   </span>
                 </div>
                 <div className="relative">
                   <Input
                     id="amount"
                     type="number"
-                    step={getCurrencyInfo().min}
-                    min={getCurrencyInfo().min}
-                    max={getBalance()}
+                    step={getCurrencyInfo()?.min}
+                    min={getCurrencyInfo()?.min}
+                    max={currentBalance}
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    placeholder={`Min ${getCurrencyInfo().icon}${getCurrencyInfo().min}`}
+                    placeholder={`Min ${getCurrencyInfo()?.symbol}${getCurrencyInfo()?.min}`}
                     className="pl-8"
                   />
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                    {getCurrencyInfo().icon}
-                  </span>
                 </div>
                 <div className="flex gap-2 mt-2">
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    onClick={() => setAmount((getBalance() * 0.25).toFixed(4))}
+                    onClick={() => setAmount((currentBalance * 0.25).toFixed(4))}
                   >
                     25%
                   </Button>
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    onClick={() => setAmount((getBalance() * 0.5).toFixed(4))}
+                    onClick={() => setAmount((currentBalance * 0.5).toFixed(4))}
                   >
                     50%
                   </Button>
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    onClick={() => setAmount((getBalance() * 0.75).toFixed(4))}
+                    onClick={() => setAmount((currentBalance * 0.75).toFixed(4))}
                   >
                     75%
                   </Button>
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    onClick={() => setAmount(getBalance().toFixed(4))}
+                    onClick={() => setAmount(currentBalance.toFixed(4))}
                   >
                     Max
                   </Button>
@@ -230,9 +274,10 @@ export default function WithdrawPage() {
               {/* Fee Information */}
               <Alert>
                 <AlertCircleIcon className="h-4 w-4" />
-                <AlertDescription>
+                <AlertDescription className="flex items-center gap-1">
                   Network fees will be deducted from your withdrawal amount. 
-                  Minimum withdrawal: {getCurrencyInfo().icon}{getCurrencyInfo().min}
+                  Minimum withdrawal: {getCurrencyInfo()?.min}
+                  {CurrencyIcon && <CurrencyIcon className="h-3 w-3" style={{ color: getCurrencyInfo()?.color }} />}
                 </AlertDescription>
               </Alert>
 
@@ -262,7 +307,7 @@ export default function WithdrawPage() {
                   <CheckCircleIcon className="h-6 w-6 text-green-400" />
                 </div>
                 <h3 className="text-lg font-medium">Withdrawal Submitted</h3>
-                <p className="text-sm text-gray-400">
+                <p className="text-sm text-gray-400 flex items-center justify-center gap-1">
                   Your withdrawal request has been submitted for processing
                 </p>
               </div>
@@ -271,8 +316,9 @@ export default function WithdrawPage() {
                 <CardContent className="pt-6 space-y-3">
                   <div className="flex justify-between">
                     <span className="text-gray-400">Amount</span>
-                    <span className="font-medium">
+                    <span className="font-medium flex items-center gap-1">
                       {withdrawalResult.amount} {withdrawalResult.currency}
+                      {CurrencyIcon && <CurrencyIcon className="h-4 w-4" style={{ color: getCurrencyInfo()?.color }} />}
                     </span>
                   </div>
                   <div className="flex justify-between">
