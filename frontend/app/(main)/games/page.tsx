@@ -1,4 +1,3 @@
-// app/(main)/games/page.tsx
 'use client';
 
 import { useState } from 'react';
@@ -15,7 +14,8 @@ import {
   TrendingUpIcon,
   ClockIcon,
   UsersIcon,
-  StarIcon
+  StarIcon,
+  BitcoinIcon,
 } from 'lucide-react';
 
 // Game data
@@ -214,7 +214,7 @@ export default function GamesPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-400">Total Wagered</p>
-                <p className="text-2xl font-bold">Ξ 12,345</p>
+                <p className="flex align-middle text-2xl font-bold">₿ 1,345</p>
               </div>
               <TrendingUpIcon className="h-8 w-8 text-green-500" />
             </div>
@@ -226,7 +226,7 @@ export default function GamesPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-400">Biggest Win</p>
-                <p className="text-2xl font-bold">Ξ 1,234</p>
+                <p className="text-2xl font-bold">₿ 84</p>
               </div>
               <ClockIcon className="h-8 w-8 text-blue-500" />
             </div>
