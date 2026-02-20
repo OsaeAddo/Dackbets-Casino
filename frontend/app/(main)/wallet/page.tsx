@@ -58,7 +58,6 @@ export default function WalletPage() {
       const walletPromises = currencies.map(async (currency) => { //TODO: make this dynamic based on supported currencies from backend
         try {
           const response = await apiClient.get(`/wallet/address/${currency}`);
-          console.log(`Loaded ${currency} wallet:`, response.data);
           return response.data;
         } catch (error) {
           console.error(`Failed to load ${currency} wallet:`, error);
@@ -91,19 +90,10 @@ export default function WalletPage() {
     return wallets.reduce((total, wallet) => total + (wallet.balance || 0), 0);
   };
 
-  const getPrimaryBalance = () => {
-    if (!user?.balance) return '0.00';
-    // Show ETH balance first, then fallback to first available
-    if (user.balance.ETH) return formatCurrency('ETH', user.balance.ETH);
-    const firstCurrency = Object.keys(user.balance)[0];
-    if (firstCurrency) return formatCurrency(firstCurrency, user.balance[firstCurrency]);
-    return '0.00';
-  };
-
   const formatCurrency = (currency: string, amount: number) => {
     if (currency === 'BTC') return `₿${amount.toFixed(6)}`;
     if (currency === 'ETH') return `Ξ${amount.toFixed(4)}`;
-    if (currency === 'USDT') return `$${amount.toFixed(2)}`;
+    if (currency === 'USDT') return `₮${amount.toFixed(2)}`;
     return `${amount.toFixed(4)} ${currency}`;
   };
 
