@@ -8,6 +8,8 @@ from app.schemas import (
     Currency, WalletResponse, DepositRequest, DepositResponse, 
     WithdrawalRequest, WithdrawalResponse, TransactionStatus
 )
+from app.models import casino_models
+
 
 import logging
 
@@ -24,18 +26,23 @@ async def get_deposit_address(
     """Get deposit address for a currency"""
     
     try:
+        user_id = user["id"]
         # Get or create wallet
         wallet = await wallet_service.get_or_create_wallet(
-            user_id=user.id,
+            user_id=user_id,
             currency=currency.value
         )
+        profile = await casino_models.get_user_profile(user_id)
+        profile_balance = profile.get("balance", {})
         
+        # Use profile balance, not wallet balance
+        actual_balance = profile_balance.get(currency.value, 0.0)
         return WalletResponse(
             id=wallet.get("id", ""),
-            user_id=user.id,
+            user_id=user_id,
             currency=Currency(wallet.get("currency", currency.value)),
             address=wallet.get("address", ""),
-            balance=wallet.get("balance", 0.0),
+            balance=actual_balance,
             created_at=wallet.get("created_at", datetime.utcnow().isoformat()),
             is_active=wallet.get("is_active", True)
         )
