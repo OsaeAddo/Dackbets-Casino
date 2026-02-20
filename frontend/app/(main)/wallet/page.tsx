@@ -1,4 +1,3 @@
-// app/(main)/wallet/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -7,7 +6,6 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 import { apiClient } from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   WalletIcon, 
   ArrowDownIcon, 
@@ -15,10 +13,15 @@ import {
   HistoryIcon,
   CopyIcon,
   CheckCircleIcon,
-  ExternalLinkIcon,
   Dice1Icon,
   AwardIcon
 } from 'lucide-react';
+// Import crypto icons from react-icons
+import { 
+  FaBitcoin, 
+  FaEthereum
+} from 'react-icons/fa';
+import { SiSolana, SiTether } from 'react-icons/si';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
@@ -40,6 +43,34 @@ interface Transaction {
   metadata?: any;
 }
 
+// Currency configuration with icons and colors
+const currencyConfig = {
+  ETH: { 
+    icon: FaEthereum, 
+    color: '#627EEA',
+    label: 'Ethereum',
+    format: (amount: number) => `${amount.toFixed(4)} ETH`
+  },
+  BTC: { 
+    icon: FaBitcoin, 
+    color: '#F7931A',
+    label: 'Bitcoin',
+    format: (amount: number) => `${amount.toFixed(6)} BTC`
+  },
+  USDT: { 
+    icon: SiTether, 
+    color: '#26A17B',
+    label: 'Tether',
+    format: (amount: number) => `${amount.toFixed(2)} USDT`
+  },
+  // SOL: { 
+  //   icon: SiSolana, 
+  //   color: '#9945FF',
+  //   label: 'Solana',
+  //   format: (amount: number) => `${amount.toFixed(2)} SOL`
+  // }
+};
+
 export default function WalletPage() {
   const { user } = useAuth();
   const [wallets, setWallets] = useState<Wallet[]>([]);
@@ -55,7 +86,7 @@ export default function WalletPage() {
     try {
       // Load wallets for supported currencies
       const currencies = ['ETH', 'BTC', 'USDT'];
-      const walletPromises = currencies.map(async (currency) => { //TODO: make this dynamic based on supported currencies from backend
+      const walletPromises = currencies.map(async (currency) => {
         try {
           const response = await apiClient.get(`/wallet/address/${currency}`);
           return response.data;
@@ -86,14 +117,26 @@ export default function WalletPage() {
     setTimeout(() => setCopiedAddress(null), 2000);
   };
 
-  const getTotalBalance = () => {
-    return wallets.reduce((total, wallet) => total + (wallet.balance || 0), 0);
+  const getTotalBalanceUSD = () => {
+    // This is a simplified calculation - in production, you'd fetch current rates
+    const rates = {
+      ETH: 2000,
+      BTC: 40000,
+      USDT: 1,
+      // SOL: 100
+    };
+    
+    return wallets.reduce((total, wallet) => {
+      const rate = rates[wallet.currency as keyof typeof rates] || 0;
+      return total + (wallet.balance * rate);
+    }, 0);
   };
 
   const formatCurrency = (currency: string, amount: number) => {
-    if (currency === 'BTC') return `₿${amount.toFixed(6)}`;
-    if (currency === 'ETH') return `Ξ${amount.toFixed(4)}`;
-    if (currency === 'USDT') return `₮${amount.toFixed(2)}`;
+    const config = currencyConfig[currency as keyof typeof currencyConfig];
+    if (config) {
+      return config.format(amount);
+    }
     return `${amount.toFixed(4)} ${currency}`;
   };
 
@@ -104,6 +147,15 @@ export default function WalletPage() {
       case 'failed': return 'bg-red-500/10 text-red-500';
       default: return 'bg-gray-500/10 text-gray-500';
     }
+  };
+
+  const getCurrencyIcon = (currency: string, className: string = "h-4 w-4") => {
+    const config = currencyConfig[currency as keyof typeof currencyConfig];
+    if (config) {
+      const Icon = config.icon;
+      return <Icon className={className} style={{ color: config.color }} />;
+    }
+    return null;
   };
 
   if (loading) {
@@ -134,11 +186,16 @@ export default function WalletPage() {
             <div>
               <p className="text-sm text-gray-400 mb-1">Total Balance</p>
               <p className="text-4xl font-bold text-green-400">
-                ${(getTotalBalance() * 2000).toFixed(2)} USD
+                ${getTotalBalanceUSD().toFixed(2)} USD
               </p>
-              <p className="text-sm text-gray-400 mt-1">
-                ≈ {wallets.map(w => formatCurrency(w.currency, w.balance)).join(' • ')}
-              </p>
+              <div className="flex items-center gap-3 mt-2 flex-wrap">
+                {wallets.map(w => (
+                  <div key={w.currency} className="flex items-center gap-1 text-sm text-gray-400">
+                    {getCurrencyIcon(w.currency, "h-3 w-3")}
+                    <span>{formatCurrency(w.currency, w.balance)}</span>
+                  </div>
+                ))}
+              </div>
             </div>
             <WalletIcon className="h-12 w-12 text-purple-500 opacity-50" />
           </div>
@@ -181,42 +238,52 @@ export default function WalletPage() {
       {/* Wallets Grid */}
       <h2 className="text-xl font-bold mb-4">Your Wallets</h2>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
-        {wallets.map((wallet) => (
-          <Card key={wallet.currency} className="bg-gray-900/50">
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>{wallet.currency} Wallet</span>
-                <Badge variant="outline" className="font-mono">
-                  {wallet.balance?.toFixed(4)} {wallet.currency}
-                </Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between p-2 bg-gray-800/50 rounded-lg">
-                  <code className="text-xs truncate flex-1">
-                    {wallet.address}
-                  </code>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => copyToClipboard(wallet.address, wallet.currency)}
-                    className="ml-2"
-                  >
-                    {copiedAddress === wallet.currency ? (
-                      <CheckCircleIcon className="h-4 w-4 text-green-400" />
-                    ) : (
-                      <CopyIcon className="h-4 w-4" />
-                    )}
-                  </Button>
+        {wallets.map((wallet) => {
+          const currency = wallet.currency;
+          const config = currencyConfig[currency as keyof typeof currencyConfig];
+          const Icon = config?.icon;
+          
+          return (
+            <Card key={wallet.currency} className="bg-gray-900/50 hover:bg-gray-900/80 transition-colors">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {Icon && <Icon className="h-5 w-5" style={{ color: config?.color }} />}
+                    <span>{currency} Wallet</span>
+                  </div>
+                  <Badge variant="outline" className="font-mono flex items-center gap-1">
+                    {Icon && <Icon className="h-3 w-3" style={{ color: config?.color }} />}
+                    {wallet.balance?.toFixed(4)} {currency}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between p-2 bg-gray-800/50 rounded-lg">
+                    <code className="text-xs truncate flex-1">
+                      {wallet.address}
+                    </code>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => copyToClipboard(wallet.address, wallet.currency)}
+                      className="ml-2"
+                    >
+                      {copiedAddress === wallet.currency ? (
+                        <CheckCircleIcon className="h-4 w-4 text-green-400" />
+                      ) : (
+                        <CopyIcon className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    Use this address to deposit {currency}
+                  </p>
                 </div>
-                <p className="text-xs text-gray-400">
-                  Use this address to deposit {wallet.currency}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Recent Transactions */}
@@ -228,35 +295,45 @@ export default function WalletPage() {
         <CardContent>
           {recentTransactions.length > 0 ? (
             <div className="space-y-4">
-              {recentTransactions.map((tx) => (
-                <div key={tx.id} className="flex items-center justify-between p-3 bg-gray-800/30 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    {tx.transaction_type === 'deposit' && <ArrowDownIcon className="h-4 w-4 text-green-400" />}
-                    {tx.transaction_type === 'withdrawal' && <ArrowUpIcon className="h-4 w-4 text-red-400" />}
-                    {tx.transaction_type === 'bet' && <Dice1Icon className="h-4 w-4 text-purple-400" />}
-                    {tx.transaction_type === 'win' && <AwardIcon className="h-4 w-4 text-yellow-400" />}
-                    <div>
-                      <p className="font-medium capitalize">{tx.transaction_type}</p>
-                      <p className="text-xs text-gray-400">
-                        {new Date(tx.created_at).toLocaleDateString()} {new Date(tx.created_at).toLocaleTimeString()}
+              {recentTransactions.map((tx) => {
+                const currency = tx.currency;
+                const config = currencyConfig[currency as keyof typeof currencyConfig];
+                const Icon = config?.icon;
+                
+                return (
+                  <div key={tx.id} className="flex items-center justify-between p-3 bg-gray-800/30 rounded-lg hover:bg-gray-800/50 transition-colors">
+                    <div className="flex items-center space-x-3">
+                      {tx.transaction_type === 'deposit' && <ArrowDownIcon className="h-4 w-4 text-green-400" />}
+                      {tx.transaction_type === 'withdrawal' && <ArrowUpIcon className="h-4 w-4 text-red-400" />}
+                      {tx.transaction_type === 'bet' && <Dice1Icon className="h-4 w-4 text-purple-400" />}
+                      {tx.transaction_type === 'win' && <AwardIcon className="h-4 w-4 text-yellow-400" />}
+                      <div className="flex items-center gap-2">
+                        {Icon && <Icon className="h-4 w-4" style={{ color: config?.color }} />}
+                        <div>
+                          <p className="font-medium capitalize">{tx.transaction_type}</p>
+                          <p className="text-xs text-gray-400">
+                            {new Date(tx.created_at).toLocaleDateString()} {new Date(tx.created_at).toLocaleTimeString()}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className={`font-medium flex items-center gap-1 ${
+                        tx.transaction_type === 'deposit' || tx.transaction_type === 'win' 
+                          ? 'text-green-400' 
+                          : 'text-red-400'
+                      }`}>
+                        {Icon && <Icon className="h-3 w-3" />}
+                        {tx.transaction_type === 'deposit' || tx.transaction_type === 'win' ? '+' : '-'}
+                        {tx.amount.toFixed(4)} {tx.currency}
                       </p>
+                      <Badge className={`${getStatusColor(tx.status)}`}>
+                        {tx.status}
+                      </Badge>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className={`font-medium ${
-                      tx.transaction_type === 'deposit' || tx.transaction_type === 'win' 
-                        ? 'text-green-400' 
-                        : 'text-red-400'
-                    }`}>
-                      {tx.transaction_type === 'deposit' || tx.transaction_type === 'win' ? '+' : '-'}
-                      {tx.amount.toFixed(4)} {tx.currency}
-                    </p>
-                    <Badge className={`${getStatusColor(tx.status)}`}>
-                      {tx.status}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <p className="text-center text-gray-400 py-8">No transactions yet</p>
