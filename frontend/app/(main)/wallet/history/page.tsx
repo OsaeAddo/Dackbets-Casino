@@ -1,3 +1,4 @@
+// app/(main)/wallet/history/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -22,9 +23,13 @@ import {
   Dice1Icon,
   AwardIcon,
   SearchIcon,
-  FilterIcon,
-  ExternalLinkIcon
 } from 'lucide-react';
+// Import crypto icons
+import { 
+  FaBitcoin, 
+  FaEthereum
+} from 'react-icons/fa';
+import { SiSolana, SiTether } from 'react-icons/si';
 import { toast } from 'sonner';
 
 interface Transaction {
@@ -36,6 +41,14 @@ interface Transaction {
   created_at: string;
   metadata?: any;
 }
+
+// Currency icon mapping
+const currencyIcons: Record<string, { icon: any; color: string }> = {
+  ETH: { icon: FaEthereum, color: '#627EEA' },
+  BTC: { icon: FaBitcoin, color: '#F7931A' },
+  USDT: { icon: SiTether, color: '#26A17B' },
+  // SOL: { icon: SiSolana, color: '#9945FF' },
+};
 
 export default function TransactionHistoryPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -133,6 +146,15 @@ export default function TransactionHistoryPage() {
     }
   };
 
+  const getCurrencyIcon = (currency: string) => {
+    const config = currencyIcons[currency];
+    if (config) {
+      const Icon = config.icon;
+      return <Icon className="h-3 w-3" style={{ color: config.color }} />;
+    }
+    return null;
+  };
+
   if (loading && page === 1) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -223,47 +245,53 @@ export default function TransactionHistoryPage() {
         <CardContent className="pt-6">
           {filteredTransactions.length > 0 ? (
             <div className="space-y-4">
-              {filteredTransactions.map((tx) => (
-                <div
-                  key={tx.id}
-                  className="flex items-center justify-between p-4 bg-gray-800/30 rounded-lg hover:bg-gray-800/50 transition-colors"
-                >
-                  <div className="flex items-center space-x-4">
-                    <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center">
-                      {getIcon(tx.transaction_type)}
-                    </div>
-                    <div>
-                      <div className="flex items-center space-x-2">
-                        <span className="font-medium capitalize">{tx.transaction_type}</span>
-                        <Badge className={getStatusColor(tx.status)}>
-                          {tx.status}
-                        </Badge>
+              {filteredTransactions.map((tx) => {
+                const CurrencyIcon = currencyIcons[tx.currency]?.icon;
+                const currencyColor = currencyIcons[tx.currency]?.color;
+                
+                return (
+                  <div
+                    key={tx.id}
+                    className="flex items-center justify-between p-4 bg-gray-800/30 rounded-lg hover:bg-gray-800/50 transition-colors"
+                  >
+                    <div className="flex items-center space-x-4">
+                      <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center">
+                        {getIcon(tx.transaction_type)}
                       </div>
-                      <div className="flex items-center space-x-4 text-sm text-gray-400 mt-1">
-                        <span>{formatDate(tx.created_at)}</span>
-                        <code className="text-xs font-mono">{tx.id.slice(0, 16)}...</code>
+                      <div>
+                        <div className="flex items-center space-x-2">
+                          <span className="font-medium capitalize">{tx.transaction_type}</span>
+                          <Badge className={getStatusColor(tx.status)}>
+                            {tx.status}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center space-x-4 text-sm text-gray-400 mt-1">
+                          <span>{formatDate(tx.created_at)}</span>
+                          <code className="text-xs font-mono">{tx.id.slice(0, 16)}...</code>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <p className={`font-medium ${
-                      tx.transaction_type === 'deposit' || tx.transaction_type === 'win'
-                        ? 'text-green-400'
-                        : tx.transaction_type === 'withdrawal'
-                        ? 'text-red-400'
-                        : 'text-purple-400'
-                    }`}>
-                      {tx.transaction_type === 'deposit' || tx.transaction_type === 'win' ? '+' : '-'}
-                      {tx.amount.toFixed(4)} {tx.currency}
-                    </p>
-                    {tx.metadata?.tx_hash && (
-                      <p className="text-xs text-gray-500 mt-1 font-mono">
-                        TX: {tx.metadata.tx_hash.slice(0, 10)}...
+                    <div className="text-right">
+                      <p className={`font-medium flex items-center justify-end gap-1 ${
+                        tx.transaction_type === 'deposit' || tx.transaction_type === 'win'
+                          ? 'text-green-400'
+                          : tx.transaction_type === 'withdrawal'
+                          ? 'text-red-400'
+                          : 'text-purple-400'
+                      }`}>
+                        {tx.transaction_type === 'deposit' || tx.transaction_type === 'win' ? '+' : '-'}
+                        {tx.amount.toFixed(4)} {tx.currency}
+                        {CurrencyIcon && <CurrencyIcon className="h-3 w-3" style={{ color: currencyColor }} />}
                       </p>
-                    )}
+                      {tx.metadata?.tx_hash && (
+                        <p className="text-xs text-gray-500 mt-1 font-mono">
+                          TX: {tx.metadata.tx_hash.slice(0, 10)}...
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="text-center py-12">
