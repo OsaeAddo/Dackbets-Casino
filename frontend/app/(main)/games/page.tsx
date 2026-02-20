@@ -135,7 +135,7 @@ export default function GamesPage() {
               }`}
             >
               {/* Gradient Background */}
-              <div className={`absolute inset-0 bg-gradient-to-br ${game.color} opacity-0 group-hover:opacity-10 transition-opacity`} />
+              <div className={`absolute pointer-events-none inset-0 bg-gradient-to-br ${game.color} opacity-0 group-hover:opacity-10 transition-opacity`} />
               
               <CardHeader>
                 <div className="flex items-start justify-between">
