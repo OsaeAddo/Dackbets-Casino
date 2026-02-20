@@ -31,7 +31,7 @@ export default function Navigation({ isOpen, onClose }: NavigationProps) {
     { href: '/', label: 'Home', icon: HomeIcon },
     { href: '/games', label: 'Games', icon: Dice1Icon },
     { href: '/wallet', label: 'Wallet', icon: WalletIcon },
-    { href: '/history', label: 'History', icon: HistoryIcon },
+    { href: '/wallet/history', label: 'History', icon: HistoryIcon },
   ];
 
   return (
