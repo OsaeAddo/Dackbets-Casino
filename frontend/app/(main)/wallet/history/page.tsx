@@ -1,4 +1,3 @@
-// app/(main)/wallet/history/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
