@@ -110,7 +110,7 @@ export default function Header() {
               <WalletIcon className="h-4 w-4 mr-1" />
               Wallet
             </NavLink>
-            <NavLink href="/history" active={pathname === '/history'}>
+            <NavLink href="/wallet/history" active={pathname === '/wallet/history'}>
               <HistoryIcon className="h-4 w-4 mr-1" />
               History
             </NavLink>
