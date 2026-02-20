@@ -1,4 +1,3 @@
-// app/(main)/wallet/deposit/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -17,6 +16,12 @@ import {
   QrCodeIcon,
   AlertCircleIcon
 } from 'lucide-react';
+// Import crypto icons
+import { 
+  FaBitcoin, 
+  FaEthereum
+} from 'react-icons/fa';
+import { SiTether } from 'react-icons/si';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import Image from 'next/image';
@@ -36,6 +41,31 @@ interface DepositResponse {
   expires_at: string;
 }
 
+// Currency configuration with icons
+const currencyConfig = {
+  ETH: { 
+    icon: FaEthereum, 
+    color: '#627EEA',
+    label: 'Ethereum',
+    symbol: 'Ξ',
+    min: 0.01
+  },
+  BTC: { 
+    icon: FaBitcoin, 
+    color: '#F7931A',
+    label: 'Bitcoin',
+    symbol: '₿',
+    min: 0.0001
+  },
+  USDT: { 
+    icon: SiTether, 
+    color: '#26A17B',
+    label: 'Tether',
+    symbol: '₮',
+    min: 10
+  },
+};
+
 export default function DepositPage() {
   const { user } = useAuth();
   const router = useRouter();
@@ -47,11 +77,10 @@ export default function DepositPage() {
   const [copied, setCopied] = useState(false);
   const [step, setStep] = useState<'select' | 'address' | 'confirm'>('select');
 
-  const currencies = [
-    { value: 'ETH', label: 'Ethereum', min: 0.01, icon: 'Ξ' },
-    { value: 'BTC', label: 'Bitcoin', min: 0.0001, icon: '₿' },
-    { value: 'USDT', label: 'Tether', min: 10, icon: '₮' },
-  ];
+  const currencies = Object.entries(currencyConfig).map(([value, config]) => ({
+    value,
+    ...config
+  }));
 
   // Load deposit address for selected currency
   useEffect(() => {
@@ -101,7 +130,7 @@ export default function DepositPage() {
   };
 
   const getCurrencyInfo = () => {
-    return currencies.find(c => c.value === selectedCurrency) || currencies[0];
+    return currencyConfig[selectedCurrency as keyof typeof currencyConfig];
   };
 
   const handleReset = () => {
@@ -109,6 +138,8 @@ export default function DepositPage() {
     setAmount('');
     setDepositResponse(null);
   };
+
+  const CurrencyIcon = getCurrencyInfo()?.icon;
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-2xl">
@@ -134,25 +165,31 @@ export default function DepositPage() {
               <div className="space-y-3">
                 <Label>Select Currency</Label>
                 <RadioGroup value={selectedCurrency} onValueChange={setSelectedCurrency}>
-                  {currencies.map((currency) => (
-                    <div key={currency.value} className="flex items-center space-x-2">
-                      <RadioGroupItem value={currency.value} id={currency.value} />
-                      <Label htmlFor={currency.value} className="flex-1 cursor-pointer">
-                        <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-800/50">
-                          <div>
-                            <span className="font-medium">{currency.label}</span>
-                            <p className="text-sm text-gray-400">
-                              Min: {currency.icon}{currency.min}
-                            </p>
+                  {currencies.map((currency) => {
+                    const Icon = currency.icon;
+                    return (
+                      <div key={currency.value} className="flex items-center space-x-2">
+                        <RadioGroupItem value={currency.value} id={currency.value} />
+                        <Label htmlFor={currency.value} className="flex-1 cursor-pointer">
+                          <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-800/50">
+                            <div className="flex items-center space-x-3">
+                              <Icon className="h-5 w-5" style={{ color: currency.color }} />
+                              <div>
+                                <span className="font-medium">{currency.label}</span>
+                                <p className="text-sm text-gray-400">
+                                  Min: {currency.symbol}{currency.min}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-sm text-gray-400">Network</span>
+                              <p className="font-mono text-xs">{currency.value}</p>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <span className="text-sm text-gray-400">Network</span>
-                            <p className="font-mono text-xs">{currency.value}</p>
-                          </div>
-                        </div>
-                      </Label>
-                    </div>
-                  ))}
+                        </Label>
+                      </div>
+                    );
+                  })}
                 </RadioGroup>
               </div>
 
@@ -163,15 +200,15 @@ export default function DepositPage() {
                   <Input
                     id="amount"
                     type="number"
-                    step={getCurrencyInfo().min}
-                    min={getCurrencyInfo().min}
+                    step={getCurrencyInfo()?.min}
+                    min={getCurrencyInfo()?.min}
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    placeholder={`Min ${getCurrencyInfo().icon}${getCurrencyInfo().min}`}
+                    placeholder={`Min ${getCurrencyInfo()?.symbol}${getCurrencyInfo()?.min}`}
                     className="pl-8"
                   />
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                    {getCurrencyInfo().icon}
+                    {getCurrencyInfo()?.symbol}
                   </span>
                 </div>
                 <p className="text-sm text-gray-400">
@@ -182,7 +219,7 @@ export default function DepositPage() {
               {/* Continue Button */}
               <Button 
                 onClick={handleCreateDeposit} 
-                disabled={!amount || parseFloat(amount) < getCurrencyInfo().min || loading}
+                disabled={!amount || parseFloat(amount) < (getCurrencyInfo()?.min || 0) || loading}
                 className="w-full"
               >
                 {loading ? 'Creating...' : 'Continue to Deposit'}
@@ -198,8 +235,10 @@ export default function DepositPage() {
                   <CheckCircleIcon className="h-6 w-6 text-green-400" />
                 </div>
                 <h3 className="text-lg font-medium">Deposit Address Generated</h3>
-                <p className="text-sm text-gray-400">
-                  Send exactly {depositResponse.amount} {depositResponse.currency} to this address
+                <p className="text-sm text-gray-400 flex items-center justify-center gap-1">
+                  Send exactly {depositResponse.amount} 
+                  {CurrencyIcon && <CurrencyIcon className="h-4 w-4" style={{ color: getCurrencyInfo()?.color }} />}
+                  {depositResponse.currency} to this address
                 </p>
               </div>
 
@@ -246,8 +285,12 @@ export default function DepositPage() {
                         <div className="text-sm">
                           <p className="font-medium text-yellow-400 mb-1">Important</p>
                           <ul className="space-y-1 text-gray-300">
-                            <li>• Send only {depositResponse.currency} to this address</li>
-                            <li>• Minimum deposit: {getCurrencyInfo().icon}{getCurrencyInfo().min}</li>
+                            <li className="flex items-center gap-1">
+                              • Send only {depositResponse.currency} 
+                              {CurrencyIcon && <CurrencyIcon className="h-3 w-3" style={{ color: getCurrencyInfo()?.color }} />}
+                              to this address
+                            </li>
+                            <li>• Minimum deposit: {getCurrencyInfo()?.symbol}{getCurrencyInfo()?.min}</li>
                             <li>• Network confirmations required: 12 for ETH, 3 for BTC</li>
                             <li>• This address expires: {new Date(depositResponse.expires_at).toLocaleString()}</li>
                           </ul>
