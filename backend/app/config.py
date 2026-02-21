@@ -42,6 +42,22 @@ class Settings(BaseSettings):
         "BNB": 12
     }
     
+    # Email Settings
+    mail_username: Optional[str] = None
+    mail_password: Optional[str] = None
+    mail_from: str = "noreply@cryptocasino.com"
+    mail_from_name: str = "CryptoCasino"
+    mail_port: int = 587
+    mail_server: str = "smtp.gmail.com"
+    mail_starttls: bool = True
+    mail_ssl_tls: bool = False
+    use_credentials: bool = True
+    validate_certs: bool = True
+    
+    # Development Email Settings
+    email_dev_mode: bool = True  # Set to False in production
+    email_dev_dir: str = "./email_logs"
+    
     # Security
     debug: bool = False
     require_kyc_for_withdrawal: bool = True
