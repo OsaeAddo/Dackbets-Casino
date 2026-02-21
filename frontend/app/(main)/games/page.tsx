@@ -18,7 +18,6 @@ import {
   BitcoinIcon,
 } from 'lucide-react';
 
-// Game data with image paths
 const games = [
   {
     id: 'dice',
