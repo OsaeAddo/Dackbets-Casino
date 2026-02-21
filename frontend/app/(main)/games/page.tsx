@@ -18,7 +18,7 @@ import {
   BitcoinIcon,
 } from 'lucide-react';
 
-// Game data
+// Game data with image paths
 const games = [
   {
     id: 'dice',
@@ -26,6 +26,8 @@ const games = [
     description: 'Roll under target, win big! Classic provably fair dice game.',
     icon: Dice1Icon,
     color: 'from-purple-500 to-blue-500',
+    image: '/images/games/dice.jpg', // Add your image
+    bgGradient: 'from-purple-900/90 to-blue-900/90',
     players: 1234,
     popularity: 98,
     minBet: 0.001,
@@ -40,6 +42,8 @@ const games = [
     description: 'Spin to win with massive multipliers. Coming soon!',
     icon: Dice1Icon,
     color: 'from-green-500 to-emerald-500',
+    image: '/images/games/slots.jpg',
+    bgGradient: 'from-green-900/90 to-emerald-900/90',
     players: 0,
     popularity: 0,
     minBet: 0,
@@ -55,6 +59,8 @@ const games = [
     description: 'Beat the dealer in this classic card game. Coming soon!',
     icon: Dice1Icon,
     color: 'from-red-500 to-orange-500',
+    image: '/images/games/blackjack.jpg',
+    bgGradient: 'from-red-900/90 to-orange-900/90',
     players: 0,
     popularity: 0,
     minBet: 0,
@@ -70,6 +76,8 @@ const games = [
     description: 'Place your bets on red or black. Coming soon!',
     icon: Dice1Icon,
     color: 'from-yellow-500 to-amber-500',
+    image: '/images/games/roulette.jpg',
+    bgGradient: 'from-yellow-900/90 to-amber-900/90',
     players: 0,
     popularity: 0,
     minBet: 0,
@@ -134,22 +142,53 @@ export default function GamesPage() {
                 game.disabled ? 'opacity-50' : 'cursor-pointer'
               }`}
             >
-              {/* Gradient Background */}
-              <div className={`absolute pointer-events-none inset-0 bg-gradient-to-br ${game.color} opacity-0 group-hover:opacity-10 transition-opacity`} />
-              
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className={`p-3 rounded-lg bg-gradient-to-br ${game.color}`}>
-                    <Icon className="h-6 w-6 text-white" />
+              {/* Game Image/Background */}
+              <div className="relative h-48 w-full overflow-hidden">
+                {/* Gradient Overlay */}
+                {/* <div className={`absolute inset-0 bg-gradient-to-br ${game.bgGradient} z-10`} /> */}
+                
+                {/* Background Image - Uncomment when you have actual images */}
+                <Image
+                  src={game.image}
+                  alt={game.name}
+                  fill
+                  className="object-cover transition-transform duration-500 group-hover:scale-110"
+                />
+                
+                {/* Fallback Pattern (remove when using actual images) */}
+                {/* <div className="absolute inset-0 bg-gradient-to-br from-gray-900 to-gray-800">
+                  <div className="absolute inset-0 opacity-20" 
+                       style={{
+                         backgroundImage: `radial-gradient(circle at 2px 2px, ${
+                           game.color.includes('purple') ? '#8b5cf6' : 
+                           game.color.includes('green') ? '#10b981' :
+                           game.color.includes('red') ? '#ef4444' : '#f59e0b'
+                         } 1px, transparent 0)`,
+                         backgroundSize: '40px 40px'
+                       }} 
+                  />
+                </div> */}
+                
+                {/* Game Icon */}
+                <div className="absolute bottom-4 left-4 z-20">
+                  <div className={`p-3 rounded-lg bg-gradient-to-br ${game.color} shadow-lg`}>
+                    <Icon className="h-8 w-8 text-white" />
                   </div>
-                  {game.featured && (
-                    <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
+                </div>
+                
+                {/* Featured Badge */}
+                {game.featured && (
+                  <div className="absolute top-4 right-4 z-20">
+                    <Badge variant="secondary" className="bg-yellow-500/90 text-white border-0 shadow-lg">
                       <StarIcon className="h-3 w-3 mr-1" />
                       Featured
                     </Badge>
-                  )}
-                </div>
-                <CardTitle className="mt-4">{game.name}</CardTitle>
+                  </div>
+                )}
+              </div>
+              
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xl">{game.name}</CardTitle>
                 <CardDescription>{game.description}</CardDescription>
               </CardHeader>
               
@@ -214,7 +253,7 @@ export default function GamesPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-400">Total Wagered</p>
-                <p className="flex align-middle text-2xl font-bold">₿ 1,345</p>
+                <p className="text-2xl font-bold">₿ 1,345</p>
               </div>
               <TrendingUpIcon className="h-8 w-8 text-green-500" />
             </div>
