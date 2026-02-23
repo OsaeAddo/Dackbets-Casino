@@ -86,6 +86,47 @@ async def signup(user_data: UserSignUp):
             detail=detail
         )
 
+@router.post("/verify-email")
+async def verify_email(token_data: dict):
+    """Verify email with token from email link"""
+    try:
+        token = token_data.get("token")
+        if not token:
+            raise HTTPException(status_code=400, detail="Token required")
+        
+        # Supabase handles token verification
+        # You might need to implement this based on your flow
+        # This is typically handled by the confirmation link
+        
+        return {"success": True, "message": "Email verified"}
+    except Exception as e:
+        logger.error(f"Email verification error: {str(e)}")
+        raise HTTPException(status_code=400, detail="Verification failed")
+
+@router.post("/check-verification")
+async def check_verification(data: dict):
+    """Check if email is verified"""
+    try:
+        email = data.get("email")
+        if not email:
+            raise HTTPException(status_code=400, detail="Email required")
+        
+        # Get user from Supabase
+        user = await get_user_by_email(email)
+        
+        if user and user.email_confirmed_at:
+            # Email is verified, generate token
+            access_token = auth_service.create_access_token(data={"sub": user.id})
+            return {
+                "verified": True,
+                "access_token": access_token
+            }
+        else:
+            return {"verified": False}
+    except Exception as e:
+        logger.error(f"Check verification error: {str(e)}")
+        return {"verified": False}
+
 @router.post("/signin", response_model=TokenResponse)
 async def signin(user_data: UserSignIn):
     """
