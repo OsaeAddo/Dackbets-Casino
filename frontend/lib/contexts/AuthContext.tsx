@@ -1,4 +1,3 @@
-// 
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
@@ -128,7 +127,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         password, 
         username 
       });
-      
+
+      // Check if email confirmation is required
+      if (response.data.requires_confirmation) {
+        // Store email for later use
+        localStorage.setItem('pending_email', email);
+
+        // Redirect to confirmation pending page
+        router.push('/auth/verify-email');
+
+        toast.success('Please check your email to confirm your account', {
+          duration: 6000,
+          action: {
+            label: 'Open Mailpit',
+            onClick: () => window.open('http://localhost:54324', '_blank')
+          }
+        });
+
+        return {
+          success: true,
+          requiresConfirmation: true,
+          email: email
+        };
+      }
+
+      // Email already confirmed (auto-confirm in dev)
       localStorage.setItem('access_token', response.data.access_token);
       if (response.data.supabase_token) {
         localStorage.setItem('supabase_token', response.data.supabase_token);
@@ -137,16 +160,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setCookie('access_token', response.data.access_token, 7);
 
       const profileResponse = await apiClient.get('/auth/me');
-      
       setUser({
         id: profileResponse.data.user_id,
         email: profileResponse.data.email,
         username: profileResponse.data.username,
         balance: profileResponse.data.balance || {},
       });
-      
       toast.success('Account created successfully!');
       router.push('/dashboard');
+      
       return { success: true };
     } catch (error: any) {
       const errorMsg = error.response?.data?.detail || 'Registration failed';
