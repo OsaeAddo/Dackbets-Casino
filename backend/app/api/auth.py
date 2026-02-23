@@ -35,16 +35,28 @@ async def signup(user_data: UserSignUp):
                 response.user.email,
                 user_data.username
             ) 
-            supabase_token = response.session.access_token #for get_user() calls
-            
-            #(optional, for my API)
-            access_token = auth_service.create_access_token(
-                data={"sub": response.user.id}
-            )
             
             #Get initial casino profile
             profile = await casino_models.get_user_profile(response.user.id)
             
+            # Check if email confirmation is required
+            email_confirmed = response.user.email_confirmed_at is not None
+            
+            if email_confirmed:
+                supabase_token = response.session.access_token #for get_user() calls
+                #(optional, for my API)
+                access_token = auth_service.create_access_token(
+                    data={"sub": response.user.id}
+                )
+            else:
+                # Email confirmation required
+                return {
+                    "user_id": response.user.id,
+                    "email": response.user.email,
+                    "requires_confirmation": True,
+                    "message": "Please check your email to confirm your account"
+                }
+               
             return TokenResponse(
                 access_token=access_token,
                 expires_in=settings.jwt_access_token_expire_minutes * 60,
