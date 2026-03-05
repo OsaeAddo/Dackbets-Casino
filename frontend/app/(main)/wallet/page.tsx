@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { usePrices } from '@/lib/contexts/PriceContext';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { apiClient } from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
@@ -14,7 +15,8 @@ import {
   CopyIcon,
   CheckCircleIcon,
   Dice1Icon,
-  AwardIcon
+  AwardIcon,
+  RefreshCwIcon
 } from 'lucide-react';
 // Import crypto icons from react-icons
 import { 
@@ -73,6 +75,7 @@ const currencyConfig = {
 
 export default function WalletPage() {
   const { user } = useAuth();
+  const { prices, loading: pricesLoading, error, refreshPrices, convertToUSD } = usePrices();
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -119,17 +122,20 @@ export default function WalletPage() {
 
   const getTotalBalanceUSD = () => {
     // This is a simplified calculation - in production, you'd fetch current rates
-    const rates = {
-      ETH: 2000,
-      BTC: 40000,
-      USDT: 1,
-      // SOL: 100
-    };
+    if (!prices) return 0; 
     
     return wallets.reduce((total, wallet) => {
-      const rate = rates[wallet.currency as keyof typeof rates] || 0;
-      return total + (wallet.balance * rate);
+      const currency = wallet.currency as keyof typeof prices;
+      if (!prices[currency]) return total;
+
+      return total + (wallet.balance * prices[currency]);
     }, 0);
+  };
+
+  const getCurrencyUSDValue = (currency: string, amount: number) => {
+    if (!prices) return 0;
+    const rate = prices[currency as keyof typeof prices];
+    return rate ? amount * rate : 0;
   };
 
   const formatCurrency = (currency: string, amount: number) => {
@@ -186,16 +192,34 @@ export default function WalletPage() {
             <div>
               <p className="text-sm text-gray-400 mb-1">Total Balance</p>
               <p className="text-4xl font-bold text-green-400">
-                ${getTotalBalanceUSD().toFixed(2)} USD
+                ${getTotalBalanceUSD().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
               </p>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={refreshPrices}
+                disabled={pricesLoading}
+                className="h-8 w-8"
+                cursor-pointer
+              >
+                <RefreshCwIcon className={`h-4 w-4 ${pricesLoading ? 'animate-spin' : ''}`} />
+              </Button>
               <div className="flex items-center gap-3 mt-2 flex-wrap">
                 {wallets.map(w => (
                   <div key={w.currency} className="flex items-center gap-1 text-sm text-gray-400">
                     {getCurrencyIcon(w.currency, "h-3 w-3")}
                     <span>{formatCurrency(w.currency, w.balance)}</span>
+                    {prices && prices[w.currency as keyof typeof prices] && (
+                      <span className="text-xs text-gray-500">
+                        (${getCurrencyUSDValue(w.currency, w.balance).toFixed(2)})
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>
+              {error && (
+                <p className="text-xs text-red-400 mt-2">{error}</p>
+              )}
             </div>
             <WalletIcon className="h-12 w-12 text-purple-500 opacity-50" />
           </div>
