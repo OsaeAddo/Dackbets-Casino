@@ -1,4 +1,3 @@
-// app/(main)/games/dice/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -24,6 +23,7 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { useCurrency } from '@/lib/contexts/CurrencyContext';
 
 interface BetResult {
   bet_id: string;
@@ -47,6 +47,8 @@ interface BetResult {
 
 export default function DiceGamePage() {
   const { user, refreshUser } = useAuth();
+  const { selectedCurrency, currencyConfig } = useCurrency();
+  const currentCurrency = currencyConfig[selectedCurrency];
   const [isLoading, setIsLoading] = useState(false);
   const [betAmount, setBetAmount] = useState(0.01);
   const [winChance, setWinChance] = useState(50);
@@ -59,6 +61,11 @@ export default function DiceGamePage() {
   // Calculate multiplier based on win chance
   const multiplier = (100 / winChance) * 0.99; // 1% house edge
   const potentialWin = betAmount * multiplier;
+
+  // Update bet amount when currency changes
+  useEffect(() => {
+    setBetAmount(currentCurrency.minBet);
+  }, [selectedCurrency]);
 
   // Update target when chance changes
   useEffect(() => {
@@ -94,8 +101,8 @@ export default function DiceGamePage() {
       return;
     }
 
-    if (betAmount <= 0) {
-      toast.error('Bet amount must be greater than 0');
+    if (betAmount < currentCurrency.minBet) {
+      toast.error(`Minimum bet is ${currentCurrency.minBet}${currentCurrency.symbol}`);
       return;
     }
 
@@ -110,7 +117,7 @@ export default function DiceGamePage() {
     try {
       const response = await apiClient.post('/games/bet', {
         game_type: 'dice',
-        currency: 'ETH',
+        currency: selectedCurrency,
         amount: betAmount,
         parameters: {
           win_chance: winChance,
@@ -141,11 +148,11 @@ export default function DiceGamePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900">
+    <div className="min-h-screen bg-linear-to-b from-gray-950 to-gray-900">
       {/* Hero Section with Game Image */}
       <div className="relative h-64 md:h-80 w-full overflow-hidden">
         {/* Background Image - Replace with actual dice game image */}
-        <div className="absolute inset-0 bg-gradient-to-r from-purple-900 to-blue-900">
+        <div className="absolute inset-0 bg-linear-to-r from-purple-900 to-blue-900">
           <div className="absolute inset-0 opacity-20"
                style={{
                  backgroundImage: 'radial-gradient(circle at 2px 2px, #ffffff 1px, transparent 0)',
@@ -165,10 +172,10 @@ export default function DiceGamePage() {
         </div>
         
         {/* Title Overlay */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-gray-950 to-transparent p-8">
+        <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-gray-950 to-transparent p-8">
           <div className="container mx-auto">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 shadow-lg">
+              <div className="p-3 rounded-lg bg-linear-to-br from-purple-500 to-blue-500 shadow-lg">
                 <Dice1Icon className="h-8 w-8 text-white" />
               </div>
               <div>
@@ -244,9 +251,9 @@ export default function DiceGamePage() {
                 {/* Bet Amount */}
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <Label>Bet Amount (ETH)</Label>
+                    <Label>Bet Amount ({selectedCurrency})</Label>
                     <span className="text-sm text-gray-400">
-                      Balance: {user?.balance?.ETH?.toFixed(4) || '0.0000'} ETH
+                      Balance: {currentCurrency.format(user?.balance?.[selectedCurrency] || 0)}
                     </span>
                   </div>
                   <div className="flex gap-2">
@@ -254,8 +261,8 @@ export default function DiceGamePage() {
                       type="number"
                       value={betAmount}
                       onChange={(e) => setBetAmount(parseFloat(e.target.value) || 0)}
-                      step={0.001}
-                      min={0.001}
+                      step={currentCurrency.minBet}
+                      min={currentCurrency.minBet}
                       className="flex-1"
                     />
                     <Button
@@ -280,6 +287,9 @@ export default function DiceGamePage() {
                       Max
                     </Button>
                   </div>
+                  <p className="text-xs text-gray-400">
+                    Min bet: {currentCurrency.minBet}{currentCurrency.symbol}
+                  </p>
                 </div>
 
                 {/* Client Seed (Provably Fair) */}
@@ -333,7 +343,7 @@ export default function DiceGamePage() {
                 <Button
                   onClick={handleBet}
                   disabled={isLoading || !user || betAmount <= 0}
-                  className="w-full h-12 text-lg bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                  className="w-full h-12 text-lg bg-linear-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
                   size="lg"
                 >
                   {isLoading ? (
@@ -389,7 +399,7 @@ export default function DiceGamePage() {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Balance Card */}
-            <Card className="bg-gradient-to-br from-purple-500/10 to-blue-500/10 border-purple-500/20">
+            <Card className="bg-linear-to-br from-purple-500/10 to-blue-500/10 border-purple-500/20">
               <CardHeader>
                 <CardTitle>Your Balance</CardTitle>
               </CardHeader>
@@ -413,19 +423,19 @@ export default function DiceGamePage() {
               </CardHeader>
               <CardContent className="space-y-4 text-sm">
                 <div className="flex gap-3">
-                  <div className="w-6 h-6 rounded-full bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                  <div className="w-6 h-6 rounded-full bg-purple-500/10 flex items-center justify-center shrink-0">
                     <span className="text-purple-400 font-medium">1</span>
                   </div>
                   <p>Set your win chance or target number</p>
                 </div>
                 <div className="flex gap-3">
-                  <div className="w-6 h-6 rounded-full bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                  <div className="w-6 h-6 rounded-full bg-purple-500/10 flex items-center justify-center shrink-0">
                     <span className="text-purple-400 font-medium">2</span>
                   </div>
                   <p>Enter your bet amount in ETH</p>
                 </div>
                 <div className="flex gap-3">
-                  <div className="w-6 h-6 rounded-full bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                  <div className="w-6 h-6 rounded-full bg-purple-500/10 flex items-center justify-center shrink-0">
                     <span className="text-purple-400 font-medium">3</span>
                   </div>
                   <p>Roll the dice. Win if roll is under target</p>
@@ -475,7 +485,7 @@ export default function DiceGamePage() {
             </Card>
 
             {/* Provably Fair Badge */}
-            <Card className="bg-gradient-to-br from-purple-500/10 to-blue-500/10 border-purple-500/20">
+            <Card className="bg-linear-to-br from-purple-500/10 to-blue-500/10 border-purple-500/20">
               <CardContent className="pt-6 text-center">
                 <AwardIcon className="h-8 w-8 text-purple-400 mx-auto mb-2" />
                 <h3 className="font-medium mb-1">Provably Fair</h3>
