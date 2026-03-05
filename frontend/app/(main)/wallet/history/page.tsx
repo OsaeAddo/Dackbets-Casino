@@ -1,4 +1,3 @@
-// app/(main)/wallet/history/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -29,7 +28,7 @@ import {
   FaBitcoin, 
   FaEthereum
 } from 'react-icons/fa';
-import { SiSolana, SiTether } from 'react-icons/si';
+import { SiTether } from 'react-icons/si';
 import { toast } from 'sonner';
 
 interface Transaction {
