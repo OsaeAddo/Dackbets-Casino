@@ -10,14 +10,14 @@ export default function HomePage() {
       {/* Background Image with Overlay */}
       <div className="absolute inset-0 z-0">
         <Image
-          src="/images/main-bg.jpg" // Replace with your actual image path
+          src="/images/main-bg.avif" // Replace with your actual image path
           alt="Casino background"
           fill
           className="object-cover"
           priority
         />
         {/* Dark overlay for better text readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/70" />
+        <div className="absolute inset-0 bg-linear-to-b from-black/70 via-black/50 to-black/70" />
         
         {/* Animated pattern overlay */}
         <div className="absolute inset-0 opacity-20"
@@ -32,7 +32,7 @@ export default function HomePage() {
       <div className="relative z-10 container mx-auto px-4 py-16 min-h-screen flex flex-col items-center justify-center text-white">
         {/* Logo/Brand */}
         <div className="flex items-center gap-3 mb-8 animate-fade-in">
-          <div className="p-3 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 shadow-lg shadow-purple-500/30">
+          <div className="p-3 rounded-2xl bg-linear-to-br from-purple-600 to-blue-600 shadow-lg shadow-purple-500/30">
             <CoinsIcon className="h-8 w-8" />
           </div>
           <span className="text-3xl font-bold">CryptoCasino</span>
@@ -40,11 +40,11 @@ export default function HomePage() {
 
         {/* Main Title */}
         <h1 className="text-5xl md:text-7xl font-bold text-center mb-6 animate-slide-up">
-          <span className="bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+          <span className="bg-linear-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
             Welcome to
           </span>
           <br />
-          <span className="bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">
+          <span className="bg-linear-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">
             Crypto Casino
           </span>
         </h1>
@@ -83,8 +83,8 @@ export default function HomePage() {
         </div>
 
         {/* CTA Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 animate-slide-up animation-delay-400">
-          <Button asChild size="lg" className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white border-0 px-8 py-6 text-lg">
+        <div className="flex flex-col sm:flex-row gap-4 animation-delay-200">
+          <Button asChild size="lg" className="bg-linear-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white border-0 px-8 py-6 text-lg">
             <Link href="/register">
               Get Started
             </Link>
