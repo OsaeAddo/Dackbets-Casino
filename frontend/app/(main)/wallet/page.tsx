@@ -180,7 +180,7 @@ export default function WalletPage() {
       </div>
 
       {/* Total Balance Card */}
-      <Card className="mb-8 bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-purple-500/20">
+      <Card className="mb-8 bg-linear-to-r from-purple-500/10 to-blue-500/10 border-purple-500/20">
         <CardContent className="pt-6">
           <div className="flex items-center justify-between">
             <div>
