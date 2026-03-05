@@ -1,4 +1,3 @@
-// components/common/Header.tsx
 'use client';
 import { useState } from 'react';
 import Navigation from './Navigation';
@@ -6,6 +5,7 @@ import Navigation from './Navigation';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { useCurrency } from '@/lib/contexts/CurrencyContext';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -17,67 +17,52 @@ import {
   DropdownMenuGroup,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { 
-  Dice1Icon, 
-  WalletIcon, 
+import {
+  Dice1Icon,
+  WalletIcon,
   HistoryIcon,
   LogOutIcon,
   UserIcon,
   MenuIcon,
   CoinsIcon,
   ChevronDownIcon,
+  CheckIcon
 } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 
-// Import crypto icons from react-icons
-import { 
-  FaBitcoin, 
-  FaEthereum
-} from 'react-icons/fa';
-import { SiSolana, SiTether } from 'react-icons/si';
-
 export default function Header() {
   const { user, logout, loading } = useAuth();
+  const { selectedCurrency, setSelectedCurrency, currencyConfig } = useCurrency();
   const pathname = usePathname();
   const [isNavOpen, setIsNavOpen] = useState(false);
-
-  // Supported cryptocurrencies with their icons and display names
-  const supportedCurrencies = [
-    { 
-      value: 'ETH', 
-      label: 'Ethereum', 
-      icon: FaEthereum, 
-      color: '#627EEA',
-      format: (amount: number) => `${amount.toFixed(4)} ETH`
-    },
-    { 
-      value: 'BTC', 
-      label: 'Bitcoin', 
-      icon: FaBitcoin, 
-      color: '#F7931A',
-      format: (amount: number) => `${amount.toFixed(6)} BTC`
-    },
-    { 
-      value: 'USDT', 
-      label: 'Tether', 
-      icon: SiTether, 
-      color: '#26A17B',
-      format: (amount: number) => `${amount.toFixed(2)} USDT`
-    },
-    // { 
-    //   value: 'SOL', 
-    //   label: 'Solana', 
-    //   icon: SiSolana, 
-    //   color: '#9945FF',
-    //   format: (amount: number) => `${amount.toFixed(2)} SOL`
-    // },
-  ];
 
   // Don't show header on auth pages
   if (pathname === '/login' || pathname === '/register') {
     return null;
   }
+  
+  const getInitials = () => {
+    if (user?.username) {
+      return user.username.substring(0, 2).toUpperCase();
+    }
+    if (user?.email) {
+      return user.email.substring(0, 2).toUpperCase();
+    }
+    return 'PL';
+  };
 
+  // Get all balances with icons
+  const getAllBalances = () => {
+    return Object.values(currencyConfig).map(config => ({
+      ...config,
+      balance: user?.balance?.[config.value] || 0
+    }));
+  };
+
+  // Get the currently selected currency's full config
+  const currentCurrency = currencyConfig[selectedCurrency];
+  const currentBalance = user?.balance?.[selectedCurrency] || 0;
+  
   // Show skeleton while loading
   if (loading) {
     return (
@@ -94,37 +79,7 @@ export default function Header() {
       </header>
     );
   }
-
-  const getInitials = () => {
-    if (user?.username) {
-      return user.username.substring(0, 2).toUpperCase();
-    }
-    if (user?.email) {
-      return user.email.substring(0, 2).toUpperCase();
-    }
-    return 'PL';
-  };
-
-  // Get primary balance (ETH by default, or first available)
-  const getPrimaryCurrency = () => {
-    const primary = supportedCurrencies.find(c => c.value === 'ETH') || supportedCurrencies[0];
-    const balance = user?.balance?.[primary.value] || 0;
-    return {
-      ...primary,
-      balance
-    };
-  };
-
-  // Get all balances with icons
-  const getAllBalances = () => {
-    return supportedCurrencies.map(currency => ({
-      ...currency,
-      balance: user?.balance?.[currency.value] || 0
-    }));
-  };
-
-  const primaryCurrency = getPrimaryCurrency();
-
+  
   return (
     <>
       <header className="border-b border-gray-800 bg-gray-950/95 sticky top-0 z-50 backdrop-blur-sm">
@@ -156,42 +111,50 @@ export default function Header() {
             <div className="flex items-center space-x-4">
               {user ? (
                 <>
-                  {/* Balance Dropdown */}
+                  {/* Balance Dropdown - Now shows selected currency as primary */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         className="hidden md:flex items-center space-x-2 px-3 py-1.5 bg-gray-900 border-gray-800 hover:bg-gray-800"
                       >
-                        <primaryCurrency.icon 
-                          className="h-4 w-4" 
-                          style={{ color: primaryCurrency.color }}
+                        <currentCurrency.icon
+                          className="h-4 w-4"
+                          style={{ color: currentCurrency.color }}
                         />
                         <span className="font-semibold text-green-400">
-                          {primaryCurrency.format(primaryCurrency.balance)}
+                          {currentCurrency.format(currentBalance)}
                         </span>
                         <ChevronDownIcon className="h-4 w-4 text-gray-400" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="w-64" align="end">
-                      <DropdownMenuLabel>Your Balances</DropdownMenuLabel>
+                      <DropdownMenuLabel>Select Currency</DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       <DropdownMenuGroup>
                         {getAllBalances().map((currency) => (
-                          <DropdownMenuItem key={currency.value} className="cursor-default">
+                          <DropdownMenuItem
+                            key={currency.value}
+                            className={`cursor-pointer ${selectedCurrency === currency.value ? 'bg-purple-500/10' : ''}`}
+                            onClick={() => setSelectedCurrency(currency.value)}
+                          >
                             <div className="flex items-center justify-between w-full">
                               <div className="flex items-center space-x-2">
-                                <currency.icon 
-                                  className="h-5 w-5" 
+                                <currency.icon
+                                  className="h-5 w-5"
                                   style={{ color: currency.color }}
                                 />
-                                {/* <span>{currency.label}</span> */}
+                                <span>{currency.label}</span>
                               </div>
-                              <span className={`font-mono ${
-                                currency.balance > 0 ? 'text-green-400' : 'text-gray-500'
-                              }`}>
-                                {currency.format(currency.balance)}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className={`font-mono ${currency.balance > 0 ? 'text-green-400' : 'text-gray-500'
+                                  }`}>
+                                  {currency.format(currency.balance)}
+                                </span>
+                                {selectedCurrency === currency.value && (
+                                  <CheckIcon className="h-4 w-4 text-purple-400" />
+                                )}
+                              </div>
                             </div>
                           </DropdownMenuItem>
                         ))}
@@ -227,25 +190,27 @@ export default function Header() {
                         </div>
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator />
-                      
+
                       {/* Mobile balance display - shows all currencies */}
                       <div className="md:hidden">
                         <DropdownMenuLabel className="text-xs text-gray-400">
                           Balances
                         </DropdownMenuLabel>
                         {getAllBalances().map((currency) => (
-                          <DropdownMenuItem key={currency.value} className="cursor-default">
+                          <DropdownMenuItem
+                            key={currency.value}
+                            className="cursor-default"
+                          >
                             <div className="flex items-center justify-between w-full">
                               <div className="flex items-center space-x-2">
-                                <currency.icon 
-                                  className="h-4 w-4" 
+                                <currency.icon
+                                  className="h-4 w-4"
                                   style={{ color: currency.color }}
                                 />
                                 <span className="text-sm">{currency.value}</span>
                               </div>
-                              <span className={`text-sm font-mono ${
-                                currency.balance > 0 ? 'text-green-400' : 'text-gray-500'
-                              }`}>
+                              <span className={`text-sm font-mono ${currency.balance > 0 ? 'text-green-400' : 'text-gray-500'
+                                }`}>
                                 {currency.balance > 0 ? currency.format(currency.balance) : '0'}
                               </span>
                             </div>
@@ -253,25 +218,25 @@ export default function Header() {
                         ))}
                         <DropdownMenuSeparator />
                       </div>
-                      
+
                       <DropdownMenuItem asChild>
                         <Link href="/profile" className="cursor-pointer">
                           <UserIcon className="mr-2 h-4 w-4" />
                           <span>Profile</span>
                         </Link>
                       </DropdownMenuItem>
-                      
+
                       <DropdownMenuItem asChild>
                         <Link href="/wallet" className="cursor-pointer">
                           <WalletIcon className="mr-2 h-4 w-4" />
                           <span>Wallet</span>
                         </Link>
                       </DropdownMenuItem>
-                      
+
                       <DropdownMenuSeparator />
-                      
-                      <DropdownMenuItem 
-                        onClick={() => logout()} 
+
+                      <DropdownMenuItem
+                        onClick={() => logout()}
                         className="cursor-pointer text-red-400 focus:text-red-400"
                       >
                         <LogOutIcon className="mr-2 h-4 w-4" />
@@ -292,10 +257,10 @@ export default function Header() {
               )}
 
               {/* Mobile Menu Button */}
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="md:hidden" 
+              <Button
+                variant="ghost"
+                size="icon"
+                className="md:hidden"
                 onClick={() => setIsNavOpen(true)}
               >
                 <MenuIcon className="h-5 w-5" />
@@ -310,23 +275,22 @@ export default function Header() {
 }
 
 // Helper component for navigation links
-function NavLink({ 
-  href, 
-  active, 
-  children 
-}: { 
-  href: string; 
-  active: boolean; 
+function NavLink({
+  href,
+  active,
+  children
+}: {
+  href: string;
+  active: boolean;
   children: React.ReactNode;
 }) {
   return (
     <Link
       href={href}
-      className={`flex items-center px-3 py-2 text-sm font-medium transition-colors rounded-md ${
-        active 
-          ? 'text-purple-400 bg-purple-500/10' 
+      className={`flex items-center px-3 py-2 text-sm font-medium transition-colors rounded-md ${active
+          ? 'text-purple-400 bg-purple-500/10'
           : 'text-gray-300 hover:text-white hover:bg-gray-800'
-      }`}
+        }`}
     >
       {children}
     </Link>
