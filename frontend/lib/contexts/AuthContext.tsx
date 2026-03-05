@@ -128,6 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         username 
       });
 
+      console.log('Registration response:', response.data);
       // Check if email confirmation is required
       if (response.data.requires_confirmation) {
         // Store email for later use
