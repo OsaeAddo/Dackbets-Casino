@@ -63,10 +63,22 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+  const [idLoaded, setIdLoaded] = useState(false);
+
 
   useEffect(() => {
-    loadProfileData();
-  }, []);
+    if (user) { 
+      loadProfileData();
+    }else {
+      setLoading(false);
+    }
+  }, [user]); //rerun when user changes
+
+  useEffect(() => {
+    if (user?.id) {
+      setIdLoaded(true);
+    }
+  }, [user?.id]);
 
   const loadProfileData = async () => {
     try {
@@ -134,6 +146,9 @@ export default function ProfilePage() {
     });
   };
 
+  console.log('Full user object:', user);
+  console.log('User ID:', user?.id);
+
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -158,14 +173,14 @@ export default function ProfilePage() {
       {/* Profile Header */}
       <div className="relative mb-8">
         {/* Cover Image */}
-        <div className="h-48 w-full bg-gradient-to-r from-purple-600/20 to-blue-600/20 rounded-t-2xl border border-gray-800" />
+        <div className="h-48 w-full bg-linear-to-r from-purple-600/20 to-blue-600/20 rounded-t-2xl border border-gray-800" />
         
         {/* Profile Info */}
         <div className="relative px-6 pb-6">
           <div className="flex flex-col md:flex-row md:items-end gap-6 -mt-16">
             {/* Avatar */}
             <Avatar className="h-32 w-32 border-4 border-gray-900 bg-gray-800">
-              <AvatarFallback className="text-4xl bg-gradient-to-br from-purple-500 to-blue-500">
+              <AvatarFallback className="text-4xl bg-linear-to-br from-purple-500 to-blue-500">
                 {getInitials()}
               </AvatarFallback>
             </Avatar>
@@ -195,7 +210,7 @@ export default function ProfilePage() {
                       onClick={copyUserId}
                       className="flex items-center gap-1 hover:text-purple-400 transition-colors"
                     >
-                      <span className="font-mono text-xs">{user?.id.slice(0, 8)}...</span>
+                      <span className="font-mono text-xs">{user?.id?.slice(0, 8)}...</span>
                       {copied ? (
                         <CheckCircleIcon className="h-3 w-3 text-green-400" />
                       ) : (
@@ -239,7 +254,7 @@ export default function ProfilePage() {
       {activeTab === 'overview' && (
         <div className="space-y-6">
           {/* Level & XP Card */}
-          <Card className="bg-gradient-to-r from-purple-500/10 to-blue-500/10">
+          <Card className="bg-linear-to-r from-purple-500/10 to-blue-500/10">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
