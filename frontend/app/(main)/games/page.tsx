@@ -15,8 +15,8 @@ import {
   ClockIcon,
   UsersIcon,
   StarIcon,
-  BitcoinIcon,
 } from 'lucide-react';
+import { FaBitcoin } from 'react-icons/fa';
 
 const games = [
   {
@@ -25,8 +25,8 @@ const games = [
     description: 'Roll under target, win big! Classic provably fair dice game.',
     icon: Dice1Icon,
     color: 'from-purple-500 to-blue-500',
-    image: '/images/games/dice.jpg', // Add your image
-    bgGradient: 'from-purple-900/90 to-blue-900/90',
+    image: '/images/games/dice.avif',
+    bgGradient: 'from-purple-600/90 to-blue-600/90',
     players: 1234,
     popularity: 98,
     minBet: 0.001,
@@ -41,7 +41,8 @@ const games = [
     description: 'Spin to win with massive multipliers. Coming soon!',
     icon: Dice1Icon,
     color: 'from-green-500 to-emerald-500',
-    image: '/images/games/slots.jpg',
+    image: '/images/games/slots.avif',
+    objectPosition: 'top',
     bgGradient: 'from-green-900/90 to-emerald-900/90',
     players: 0,
     popularity: 0,
@@ -51,6 +52,7 @@ const games = [
     featured: false,
     href: '#',
     disabled: true
+
   },
   {
     id: 'blackjack',
@@ -58,7 +60,8 @@ const games = [
     description: 'Beat the dealer in this classic card game. Coming soon!',
     icon: Dice1Icon,
     color: 'from-red-500 to-orange-500',
-    image: '/images/games/blackjack.jpg',
+    image: '/images/games/blackjack.avif',
+    objectPosition: 'center',
     bgGradient: 'from-red-900/90 to-orange-900/90',
     players: 0,
     popularity: 0,
@@ -75,7 +78,8 @@ const games = [
     description: 'Place your bets on red or black. Coming soon!',
     icon: Dice1Icon,
     color: 'from-yellow-500 to-amber-500',
-    image: '/images/games/roulette.jpg',
+    image: '/images/games/roulette.avif',
+    objectPosition: 'top',
     bgGradient: 'from-yellow-900/90 to-amber-900/90',
     players: 0,
     popularity: 0,
@@ -137,7 +141,7 @@ export default function GamesPage() {
           return (
             <Card 
               key={game.id}
-              className={`group relative overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-purple-500/10 ${
+              className={`group relative overflow-hidden pt-0 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-purple-500/10 ${
                 game.disabled ? 'opacity-50' : 'cursor-pointer'
               }`}
             >
@@ -151,10 +155,11 @@ export default function GamesPage() {
                   src={game.image}
                   alt={game.name}
                   fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-110"
+                  className={`object-cover transition-transform duration-500 group-hover:scale-110`}
+                  objectPosition={game.objectPosition || ''}
                 />
                 
-                {/* Fallback Pattern (remove when using actual images) */}
+                {/* Fallback Pattern */}
                 {/* <div className="absolute inset-0 bg-gradient-to-br from-gray-900 to-gray-800">
                   <div className="absolute inset-0 opacity-20" 
                        style={{
@@ -170,7 +175,7 @@ export default function GamesPage() {
                 
                 {/* Game Icon */}
                 <div className="absolute bottom-4 left-4 z-20">
-                  <div className={`p-3 rounded-lg bg-gradient-to-br ${game.color} shadow-lg`}>
+                  <div className={`p-3 rounded-lg bg-linear-to-br ${game.color} shadow-lg`}>
                     <Icon className="h-8 w-8 text-white" />
                   </div>
                 </div>
@@ -252,7 +257,10 @@ export default function GamesPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-400">Total Wagered</p>
-                <p className="text-2xl font-bold">₿ 1,345</p>
+                <div className='flex items-center gap-1'>
+                  <FaBitcoin className='h-6 w-6' color='#F7931A' /> 
+                  <p className="text-2xl font-bold">1,345</p>
+                </div>
               </div>
               <TrendingUpIcon className="h-8 w-8 text-green-500" />
             </div>
@@ -264,7 +272,10 @@ export default function GamesPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-400">Biggest Win</p>
-                <p className="text-2xl font-bold">₿ 84</p>
+                <div className='flex items-center gap-1'>
+                  <FaBitcoin className='h-6 w-6' color='#F7931A' /> 
+                  <p className="text-2xl font-bold">84</p>
+                </div>
               </div>
               <ClockIcon className="h-8 w-8 text-blue-500" />
             </div>
