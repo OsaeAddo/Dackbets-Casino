@@ -6,6 +6,7 @@ import { ThemeProvider } from 'next-themes';
 import { AuthProvider } from '@/lib/contexts/AuthContext';
 import { useState } from 'react';
 import { CurrencyProvider } from '@/lib/contexts/CurrencyContext';
+import { PriceProvider } from '@/lib/contexts/PriceContext';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   // Create QueryClient instance (stays stable across re-renders)
@@ -31,13 +32,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
       >
         <AuthProvider>
           <CurrencyProvider>
-            {children}
-            <Toaster 
-              position="top-right"
-              richColors
-              closeButton
-              theme="dark"
-            />
+            <PriceProvider>
+              {children}
+              <Toaster 
+                position="top-right"
+                richColors
+                closeButton
+                theme="dark"
+              />
+            </PriceProvider>
           </CurrencyProvider>
         </AuthProvider>
       </ThemeProvider>
