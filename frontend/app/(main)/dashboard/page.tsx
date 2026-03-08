@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Dice1Icon, WalletIcon, HistoryIcon, Loader2Icon } from 'lucide-react';
 import Link from 'next/link';
+import { PriceChart } from '@/components/wallet/PriceChart';
 
 export default function DashboardPage() {
   const { user, loading } = useAuth();
@@ -88,6 +89,12 @@ export default function DashboardPage() {
             <Button className="w-full" disabled>Play Now</Button>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Price Chart */}
+      <div className="my-8">
+        <h2 className="text-xl font-bold mb-4">Price Chart</h2>
+        <PriceChart currency="BTC" />
       </div>
 
       {/* Recent Activity */}
