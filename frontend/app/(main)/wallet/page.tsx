@@ -23,7 +23,7 @@ import {
   FaBitcoin, 
   FaEthereum
 } from 'react-icons/fa';
-import { SiSolana, SiTether } from 'react-icons/si';
+import { SiTether } from 'react-icons/si';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
@@ -74,7 +74,7 @@ const currencyConfig = {
 };
 
 export default function WalletPage() {
-  const { user } = useAuth();
+  // const { user } = useAuth();
   const { prices, loading: pricesLoading, error, refreshPrices, convertToUSD } = usePrices();
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
@@ -121,7 +121,6 @@ export default function WalletPage() {
   };
 
   const getTotalBalanceUSD = () => {
-    // This is a simplified calculation - in production, you'd fetch current rates
     if (!prices) return 0; 
     
     return wallets.reduce((total, wallet) => {
@@ -266,6 +265,7 @@ export default function WalletPage() {
           const currency = wallet.currency;
           const config = currencyConfig[currency as keyof typeof currencyConfig];
           const Icon = config?.icon;
+          const usdValue = getCurrencyUSDValue(wallet.currency, wallet.balance)
           
           return (
             <Card key={wallet.currency} className="bg-gray-900/50 hover:bg-gray-900/80 transition-colors">
@@ -275,10 +275,17 @@ export default function WalletPage() {
                     {Icon && <Icon className="h-5 w-5" style={{ color: config?.color }} />}
                     <span>{currency} Wallet</span>
                   </div>
-                  <Badge variant="outline" className="font-mono flex items-center gap-1">
-                    {Icon && <Icon className="h-3 w-3" style={{ color: config?.color }} />}
-                    {wallet.balance?.toFixed(4)} {currency}
-                  </Badge>
+                  <div className='text-right'>
+                    <Badge variant="outline" className="font-mono flex items-center gap-1">
+                      {Icon && <Icon className="h-3 w-3" style={{ color: config?.color }} />}
+                      {wallet.balance?.toFixed(4)} {currency}
+                    </Badge>
+                    {prices && (
+                      <span className="text-xs text-gray-400">
+                        ≈ ${usdValue.toFixed(2)} USD
+                      </span>
+                    )}
+                  </div>
                 </CardTitle>
               </CardHeader>
               <CardContent>
