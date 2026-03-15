@@ -138,7 +138,9 @@ class CasinoModels:
         amount_paid: float
     ):
         """Update house statistics"""
-        return self.client.rpc(
+        client = self.admin_client if self.admin_client else self.client
+        
+        return client.rpc(
             "update_house_stats",
             {
                 "p_game_type": game_type,
