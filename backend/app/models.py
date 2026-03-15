@@ -101,8 +101,9 @@ class CasinoModels:
             "metadata": json.dumps(metadata or {}),
             "created_at": datetime.utcnow().isoformat()
         }
+        client = self.admin_client if self.admin_client else self.client
         
-        return self.client.table("casino_transactions").insert(tx_data).execute()
+        return client.table("casino_transactions").insert(tx_data).execute()
     
     # Bets Table
     async def create_bet(
