@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     # Supabase
     supabase_url: str
     supabase_key: str
-    supabase_service_role_key: Optional[str] = None
+    supabase_secret_key: str
     
     # JWT
     jwt_secret_key: str
