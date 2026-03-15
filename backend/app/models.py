@@ -48,7 +48,8 @@ class CasinoModels:
     async def update_user_balance(self, user_id: str, currency: str, amount: float):
         """Update user's balance atomically"""
         # Use Supabase RPC for atomic operations
-        return self.client.rpc(
+        client = self.admin_client if self.admin_client else self.client  
+        return client.rpc(
             "update_user_balance",
             {
                 "p_user_id": user_id,
