@@ -12,8 +12,8 @@ class SupabaseDB:
         # Admin client for service role operations
         self.admin_client: Client = create_client(
             settings.supabase_url,
-            settings.supabase_service_role_key
-        ) if settings.supabase_service_role_key else None
+            settings.supabase_secret_key
+        ) if settings.supabase_secret_key else None
     
     def get_client(self):
         return self.client
@@ -50,6 +50,39 @@ class SupabaseDB:
         response = self.admin_client.auth.admin.get_user_by_id(user_id)
         return response.user
     
+    # app/api/auth.py - Using the view
+
+    async def get_user_by_email(self, email: str):
+        """
+        Get user by email using the user_profiles view
+        """
+        try:
+            response = self.client.table("user_profiles") \
+                .select("*") \
+                .eq("email", email) \
+                .maybe_single() \
+                .execute()
+            
+            if response.data:
+                # logger.debug(f"User found for email: {email}")
+                
+                class UserFromView:
+                    def __init__(self, data):
+                        self.id = data["id"]
+                        self.email = data["email"]
+                        self.email_confirmed_at = data.get("email_confirmed_at")
+                        self.created_at = data.get("created_at")
+                        self.username = data.get("username")
+                
+                return UserFromView(response.data)
+            else:
+                # logger.debug(f"No user found for email: {email}")
+                return None
+                
+        except Exception as e:
+            # logger.error(f"Error fetching user by email {email}: {str(e)}")
+            return None
+        
     
     # def get_claims(self, access_token: str):
         # return self.client.auth.get_claims(access_token)
