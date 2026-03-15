@@ -1,5 +1,6 @@
 from supabase import create_client
 from app.config import settings
+from app.database import db
 from datetime import datetime
 from typing import Optional, Dict, Any
 import json
