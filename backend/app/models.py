@@ -25,9 +25,9 @@ class CasinoModels:
             "level": 1,
             "created_at": datetime.utcnow().isoformat()
         }
-        
-        return self.client.table("casino_profiles").insert(profile_data).execute()
-    
+        client = self.admin_client if self.admin_client else self.client
+        return client.table("casino_profiles").insert(profile_data).execute()
+            
     async def get_user_profile(self, user_id: str):
         """Get user's casino profile"""
         response = self.client.table("casino_profiles").select("*").eq("user_id", user_id).execute()
