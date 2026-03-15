@@ -125,8 +125,8 @@ class CasinoModels:
             "win_amount": win_amount,
             "timestamp": datetime.utcnow().isoformat()
         }
-        
-        return self.client.table("casino_bets").insert(bet_data).execute()
+        client = self.admin_client if self.admin_client else self.client
+        return client.table("casino_bets").insert(bet_data).execute()
     
     # House Stats
     async def update_house_stats(
