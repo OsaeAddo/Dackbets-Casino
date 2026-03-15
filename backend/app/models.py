@@ -30,7 +30,8 @@ class CasinoModels:
             
     async def get_user_profile(self, user_id: str):
         """Get user's casino profile"""
-        response = self.client.table("casino_profiles").select("*").eq("user_id", user_id).execute()
+        client = self.admin_client if self.admin_client else self.client
+        response = client.table("casino_profiles").select("*").eq("user_id", user_id).execute()
         
         profile = response.data[0] if response.data else None
         
