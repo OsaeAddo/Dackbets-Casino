@@ -8,7 +8,8 @@ import json
 
 class CasinoModels:
     def __init__(self):
-        self.client = create_client(settings.supabase_url, settings.supabase_key)
+        self.client = db.client  # Regular client (subject to RLS)
+        self.admin_client = db.admin_client  # Admin client (bypasses RLS)
     
     # User Profiles (extends Supabase auth.users)
     async def create_user_profile(self, user_id: str, email: str, username: Optional[str] = None):
