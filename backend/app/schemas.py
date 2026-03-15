@@ -8,6 +8,19 @@ class UserSignUp(BaseModel):
     password: str = Field(..., min_length=8, max_length=100)
     username: Optional[str] = None
     
+class SignupResponse(BaseModel):
+    """Response for signup that might require email confirmation"""
+    user_id: str
+    email: str
+    requires_confirmation: bool = False
+    message: Optional[str] = None
+    access_token: Optional[str] = None
+    token_type: Optional[str] = None
+    expires_in: Optional[int] = None
+    supabase_token: Optional[str] = None
+    username: Optional[str] = None
+    
+    
 class UserSignIn(BaseModel):
     email: EmailStr
     password: str
