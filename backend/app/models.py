@@ -126,6 +126,7 @@ class CasinoModels:
             "timestamp": datetime.utcnow().isoformat()
         }
         client = self.admin_client if self.admin_client else self.client
+        
         return client.table("casino_bets").insert(bet_data).execute()
     
     # House Stats
