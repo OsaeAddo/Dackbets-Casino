@@ -77,8 +77,9 @@ class CasinoModels:
             "created_at": datetime.utcnow().isoformat(),
             "is_active": True
         }
+        client = self.admin_client if self.admin_client else self.client
         
-        return self.client.table("casino_wallets").insert(wallet_data).execute()
+        return client.table("casino_wallets").insert(wallet_data).execute()
     
     # Transactions Table
     async def create_transaction(
