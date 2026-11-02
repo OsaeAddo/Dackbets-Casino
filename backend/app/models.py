@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from app.database import db
@@ -23,7 +23,7 @@ class CasinoModels:
             "total_won": {},
             "kyc_status": "pending",
             "level": 1,
-            "created_at": datetime.utcnow().isoformat()
+            "created_at": datetime.now(UTC).isoformat()
         }
         client = self.admin_client if self.admin_client else self.client
         return client.table("casino_profiles").insert(profile_data).execute()
@@ -64,7 +64,7 @@ class CasinoModels:
         """Update transaction status after confirmation"""
         client = self.admin_client if self.admin_client else self.client
         return client.table("casino_transactions") \
-            .update({"status": status, "updated_at": datetime.utcnow().isoformat()}) \
+            .update({"status": status, "updated_at": datetime.now(UTC).isoformat()}) \
             .filter("metadata->>tx_hash", "eq", tx_hash) \
             .execute()
     
@@ -76,7 +76,7 @@ class CasinoModels:
             "currency": currency,
             "address": address,
             "balance": 0.0,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
             "is_active": True
         }
         client = self.admin_client if self.admin_client else self.client
@@ -101,7 +101,7 @@ class CasinoModels:
             "amount": amount,
             "status": status,
             "metadata": json.dumps(metadata or {}),
-            "created_at": datetime.utcnow().isoformat()
+            "created_at": datetime.now(UTC).isoformat()
         }
         client = self.admin_client if self.admin_client else self.client
         
@@ -125,7 +125,7 @@ class CasinoModels:
             "amount": amount,
             "result": result,
             "win_amount": win_amount,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(UTC).isoformat()
         }
         client = self.admin_client if self.admin_client else self.client
         

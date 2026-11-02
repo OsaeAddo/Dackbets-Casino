@@ -23,7 +23,7 @@ async def admin_adjust_balance(
             await casino_models.update_user_balance(user_id, currency, amount)
         
         return {"message": "Balance updated successfully"}
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - API boundary: convert unexpected failures into an HTTP error response
         logger.error(f"Admin balance error: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

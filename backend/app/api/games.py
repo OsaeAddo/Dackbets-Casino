@@ -129,7 +129,7 @@ async def place_bet(
 
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - API boundary: convert unexpected failures into an HTTP error response
         logger.error("Bet error: %s", str(e))
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -175,7 +175,7 @@ async def get_game_history(
             ))
 
         return bets
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - API boundary: convert unexpected failures into an HTTP error response
         logger.error("History error: %s", str(e))
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

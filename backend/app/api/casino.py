@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 
 from app.database import db
 from app.schemas import CasinoStateResponse, HealthResponse
@@ -15,15 +15,15 @@ logger = logging.getLogger(__name__)
 async def casino_health():
     """Check casino health"""
     try:
-        test_connection = db.client.auth.get_session()
+        db.client.auth.get_session()
         db_status = "connected"
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - API boundary: convert unexpected failures into an HTTP error response
         db_status = f"error: {e!s}"
     
     return HealthResponse(
         status="healthy",
         service="crypto-casino",
-        timestamp=datetime.utcnow().isoformat(),
+        timestamp=datetime.now(UTC).isoformat(),
         database=db_status,
         casino_open=True
     )

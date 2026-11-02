@@ -40,7 +40,7 @@ async def tatum_deposit_webhook(
         
         return {"status": "processing", "tx_id": event.tx_hash}
         
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - API boundary: convert unexpected failures into an HTTP error response
         logger.error(f"Tatum webhook error: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

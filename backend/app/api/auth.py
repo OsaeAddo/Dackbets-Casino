@@ -93,7 +93,7 @@ async def signup(user_data: UserSignUp) -> SignupResponse:
 
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - API boundary: convert unexpected failures into an HTTP error response
         error_msg = str(e)
         logger.error("Signup error: %s", error_msg)
 
@@ -128,7 +128,7 @@ async def verify_email(token_data: dict):
         return {"success": True, "message": "Email verified"}
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - API boundary: convert unexpected failures into an HTTP error response
         logger.error("Email verification error: %s", str(e))
         raise HTTPException(status_code=400, detail="Verification failed")
 
@@ -155,7 +155,7 @@ async def check_verification(data: dict):
             return {"verified": False}
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - API boundary: convert unexpected failures into an HTTP error response
         logger.error("Check verification error: %s", str(e))
         return {"verified": False}
 
@@ -203,7 +203,7 @@ async def signin(user_data: UserSignIn):
 
     except HTTPException:
         raise
-    except Exception:
+    except Exception:  # noqa: BLE001 - API boundary: convert unexpected failures into an HTTP error response
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials"

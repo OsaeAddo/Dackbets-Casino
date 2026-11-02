@@ -1,6 +1,6 @@
 # app/api/profile.py
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 
 from app.database import db
 from app.dependencies import get_current_user_dep
@@ -89,10 +89,10 @@ async def get_user_stats(user = Depends(get_current_user_dep)):
             "xp": xp,
             "nextLevelXp": next_level_xp,
             "rank": rank,
-            "joinDate": profile.get("created_at", datetime.utcnow().isoformat())
+            "joinDate": profile.get("created_at", datetime.now(UTC).isoformat())
         }
         
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - API boundary: convert unexpected failures into an HTTP error response
         logger.error(f"Failed to get user stats: {e!s}")
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -152,6 +152,6 @@ async def get_user_activity(
         
         return all_activities[:limit]
         
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - API boundary: convert unexpected failures into an HTTP error response
         logger.error(f"Failed to get user activity: {e!s}")
         raise HTTPException(status_code=400, detail=str(e))

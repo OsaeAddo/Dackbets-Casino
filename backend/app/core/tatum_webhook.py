@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
@@ -27,7 +27,7 @@ class DepositEvent:
         self.address = address
         self.confirmations = confirmations
         self.provider = provider
-        self.timestamp = datetime.utcnow().isoformat()
+        self.timestamp = datetime.now(UTC).isoformat()
 
 class WebhookProcessor:
     def __init__(self, provider: WebhookProvider = WebhookProvider.MOCK):
@@ -87,7 +87,7 @@ class WebhookProcessor:
                     "address": event.address,
                     "confirmations": event.confirmations,
                     "provider": event.provider,
-                    "processed_at": datetime.utcnow().isoformat()
+                    "processed_at": datetime.now(UTC).isoformat()
                 }
             )
             
@@ -100,7 +100,7 @@ class WebhookProcessor:
                 "tx_hash": event.tx_hash
             }
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - Webhook boundary: report failures in the response body
             logger.error(f"Failed to credit deposit {event.tx_hash}: {e!s}")
             return {"status": "failed", "reason": str(e)}
     

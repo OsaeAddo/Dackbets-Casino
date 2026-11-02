@@ -3,6 +3,10 @@ from supabase import Client, create_client
 from app.config import settings
 
 
+class AdminClientUnavailableError(RuntimeError):
+    """Raised when a service-role operation is attempted without an admin client."""
+
+
 class SupabaseDB:
     def __init__(self):
         # print(f"Init. Supabase client with URL and Key: {settings.supabase_url}, {settings.supabase_key}") 
@@ -47,7 +51,7 @@ class SupabaseDB:
         Get user by ID using admin privileges
         """
         if not self.admin_client:
-            raise Exception("Admin client not available")
+            raise AdminClientUnavailableError("Admin client not available")
         
         response = self.admin_client.auth.admin.get_user_by_id(user_id)
         return response.user
@@ -81,7 +85,7 @@ class SupabaseDB:
                 # logger.debug(f"No user found for email: {email}")
                 return None
                 
-        except Exception:
+        except Exception:  # noqa: BLE001 - Profile lookup: a backend failure must not break signup/login
             # logger.error(f"Error fetching user by email {email}: {str(e)}")
             return None
         

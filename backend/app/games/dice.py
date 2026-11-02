@@ -1,7 +1,7 @@
 import logging
 import random
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from app.config import settings
@@ -70,7 +70,7 @@ class DiceGame:
                 "win": win,
                 "win_amount": round(win_amount, 8),
                 "house_edge": self.house_edge,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.now(UTC).isoformat()
             }
             
         except Exception as e:

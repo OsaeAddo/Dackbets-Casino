@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 # from tatum_sdk_python import TatumSDK, Network
 from app.config import settings
@@ -34,7 +34,7 @@ class WalletService:
                 "currency": currency,
                 "address": wallet_address,
                 "balance": 0.0,
-                "created_at": datetime.utcnow().isoformat(),
+                "created_at": datetime.now(UTC).isoformat(),
                 "is_active": True
             }
             
@@ -74,7 +74,7 @@ class WalletService:
                 "amount": amount,
                 "deposit_address": wallet["address"],
                 "qr_code_url": f"https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={wallet['address']}",
-                "expires_at": (datetime.utcnow() + timedelta(hours=24)).isoformat()
+                "expires_at": (datetime.now(UTC) + timedelta(hours=24)).isoformat()
             }
             
         except Exception as e:

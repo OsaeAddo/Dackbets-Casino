@@ -61,7 +61,7 @@ class AuthService:
                     "session": response.session
                 }
             return None
-        except Exception:
+        except Exception:  # noqa: BLE001 - Authentication fallback: try the next credential source
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid credentials",
@@ -85,7 +85,7 @@ class AuthService:
                 if user:
                     logger.debug("User found via Supabase token: %s", user.id)
                     return user
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - Authentication fallback: try the next credential source
                 logger.warning("Supabase token failed: %s", str(e))
 
         if custom_jwt_token:
@@ -96,7 +96,7 @@ class AuthService:
                 if user:
                     logger.debug("User found via admin API: %s", user.id)
                     return user
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - Authentication fallback: try the next credential source
                 logger.warning("Custom JWT authentication failed: %s", str(e))
 
         raise HTTPException(
