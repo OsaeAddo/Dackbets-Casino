@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import axios from 'axios';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { apiClient } from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
@@ -20,7 +21,6 @@ import {
   AwardIcon,
   StarIcon
 } from 'lucide-react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { useCurrency } from '@/lib/contexts/CurrencyContext';
@@ -45,10 +45,25 @@ interface BetResult {
   timestamp: string;
 }
 
+interface RecentBet {
+  bet_id: string;
+  game_type: string;
+  currency: string;
+  amount: number;
+  win_amount: number;
+  result: Record<string, unknown>;
+  timestamp: string;
+}
+
 export default function DiceGamePage() {
   const { user, refreshUser } = useAuth();
   const { selectedCurrency, currencyConfig } = useCurrency();
   const currentCurrency = currencyConfig[selectedCurrency];
+
+  const formatBetCurrency = (currency: string, amount: number) => {
+    const config = currencyConfig[currency as keyof typeof currencyConfig] ?? currentCurrency;
+    return config.format(amount);
+  };
   const [isLoading, setIsLoading] = useState(false);
   const [betAmount, setBetAmount] = useState(0.01);
   const [winChance, setWinChance] = useState(50);
@@ -56,7 +71,7 @@ export default function DiceGamePage() {
   const [mode, setMode] = useState<'chance' | 'target'>('chance');
   const [clientSeed, setClientSeed] = useState('');
   const [lastBet, setLastBet] = useState<BetResult | null>(null);
-  const [recentBets, setRecentBets] = useState<any[]>([]);
+  const [recentBets, setRecentBets] = useState<RecentBet[]>([]);
 
   // Calculate multiplier based on win chance
   const multiplier = (100 / winChance) * 0.99; // 1% house edge
@@ -65,7 +80,7 @@ export default function DiceGamePage() {
   // Update bet amount when currency changes
   useEffect(() => {
     setBetAmount(currentCurrency.minBet);
-  }, [selectedCurrency]);
+  }, [currentCurrency.minBet]);
 
   // Update target when chance changes
   useEffect(() => {
@@ -81,19 +96,19 @@ export default function DiceGamePage() {
     }
   }, [targetNumber, mode]);
 
-  // Load recent bets
-  useEffect(() => {
-    loadRecentBets();
-  }, []);
-
-  const loadRecentBets = async () => {
+  const loadRecentBets = useCallback(async () => {
     try {
-      const response = await apiClient.get('/games/history?limit=10');
+      const response = await apiClient.get<RecentBet[]>('/games/history?limit=10');
       setRecentBets(response.data);
     } catch (error) {
       console.error('Failed to load recent bets:', error);
     }
-  };
+  }, []);
+
+  // Load recent bets
+  useEffect(() => {
+    void loadRecentBets();
+  }, [loadRecentBets]);
 
   const handleBet = async () => {
     if (!user) {
@@ -102,11 +117,16 @@ export default function DiceGamePage() {
     }
 
     if (betAmount < currentCurrency.minBet) {
-      toast.error(`Minimum bet is ${currentCurrency.minBet}${currentCurrency.symbol}`);
+      toast.error(`Minimum bet is ${currentCurrency.format(currentCurrency.minBet)}`);
       return;
     }
 
-    const balance = user.balance?.ETH || 0;
+    if (betAmount > currentCurrency.maxBet) {
+      toast.error(`Maximum bet is ${currentCurrency.format(currentCurrency.maxBet)}`);
+      return;
+    }
+
+    const balance = user.balance?.[selectedCurrency] || 0;
     if (betAmount > balance) {
       toast.error('Insufficient balance');
       return;
@@ -115,7 +135,7 @@ export default function DiceGamePage() {
     setIsLoading(true);
 
     try {
-      const response = await apiClient.post('/games/bet', {
+      const response = await apiClient.post<BetResult>('/games/bet', {
         game_type: 'dice',
         currency: selectedCurrency,
         amount: betAmount,
@@ -130,12 +150,15 @@ export default function DiceGamePage() {
       await loadRecentBets(); // Refresh history
       
       if (response.data.win_amount > 0) {
-        toast.success(`You won ${response.data.win_amount.toFixed(4)} ETH!`);
+        toast.success(`You won ${currentCurrency.format(response.data.win_amount)}!`);
       } else {
         toast.error('Better luck next time!');
       }
-    } catch (error: any) {
-      toast.error(error.response?.data?.detail || 'Bet failed');
+    } catch (error: unknown) {
+      const detail = axios.isAxiosError(error)
+        ? (error.response?.data as { detail?: string } | undefined)?.detail
+        : undefined;
+      toast.error(detail || 'Bet failed');
     } finally {
       setIsLoading(false);
     }
@@ -263,6 +286,7 @@ export default function DiceGamePage() {
                       onChange={(e) => setBetAmount(parseFloat(e.target.value) || 0)}
                       step={currentCurrency.minBet}
                       min={currentCurrency.minBet}
+                      max={currentCurrency.maxBet}
                       className="flex-1"
                     />
                     <Button
@@ -281,14 +305,14 @@ export default function DiceGamePage() {
                     </Button>
                     <Button
                       variant="outline"
-                      onClick={() => setBetAmount(user?.balance?.ETH || 0)}
+                      onClick={() => setBetAmount(user?.balance?.[selectedCurrency] || 0)}
                       size="sm"
                     >
                       Max
                     </Button>
                   </div>
                   <p className="text-xs text-gray-400">
-                    Min bet: {currentCurrency.minBet}{currentCurrency.symbol}
+                    Min bet: {currentCurrency.format(currentCurrency.minBet)} · Max: {currentCurrency.format(currentCurrency.maxBet)}
                   </p>
                 </div>
 
@@ -327,13 +351,13 @@ export default function DiceGamePage() {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-400">Potential Win</span>
-                    <span className="font-medium text-green-400">{potentialWin.toFixed(4)} ETH</span>
+                    <span className="font-medium text-green-400">{currentCurrency.format(potentialWin)}</span>
                   </div>
                   <div className="border-t border-gray-700 my-2 pt-2">
                     <div className="flex justify-between">
                       <span className="font-medium">Total Payout</span>
                       <span className="font-bold text-green-400">
-                        {potentialWin > 0 ? (potentialWin + betAmount).toFixed(4) : '0.0000'} ETH
+                        {currentCurrency.format(potentialWin > 0 ? potentialWin + betAmount : 0)}
                       </span>
                     </div>
                   </div>
@@ -375,9 +399,9 @@ export default function DiceGamePage() {
                       <div className="space-y-1">
                         <p>Roll: {lastBet.result.roll.toFixed(2)}</p>
                         <p>Target: {lastBet.result.target}</p>
-                        <p>Bet: {lastBet.amount} ETH</p>
+                        <p>Bet: {formatBetCurrency(lastBet.currency, lastBet.amount)}</p>
                         <p className="text-green-400">
-                          Won: {lastBet.win_amount.toFixed(4)} ETH
+                          Won: {formatBetCurrency(lastBet.currency, lastBet.win_amount)}
                         </p>
                       </div>
                     </div>
@@ -405,11 +429,8 @@ export default function DiceGamePage() {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-green-400">
-                  {user?.balance?.ETH?.toFixed(4) || '0.0000'} ETH
+                  {currentCurrency.format(user?.balance?.[selectedCurrency] || 0)}
                 </div>
-                <p className="text-sm text-gray-400 mt-1">
-                  ≈ ${((user?.balance?.ETH || 0) * 2000).toFixed(2)} USD
-                </p>
                 <Button asChild className="w-full mt-4" variant="outline">
                   <Link href="/wallet">Deposit</Link>
                 </Button>
@@ -432,7 +453,7 @@ export default function DiceGamePage() {
                   <div className="w-6 h-6 rounded-full bg-purple-500/10 flex items-center justify-center shrink-0">
                     <span className="text-purple-400 font-medium">2</span>
                   </div>
-                  <p>Enter your bet amount in ETH</p>
+                  <p>Enter your bet amount in {selectedCurrency}</p>
                 </div>
                 <div className="flex gap-3">
                   <div className="w-6 h-6 rounded-full bg-purple-500/10 flex items-center justify-center shrink-0">
@@ -468,10 +489,12 @@ export default function DiceGamePage() {
                         ) : (
                           <Dice1Icon className="h-4 w-4 text-red-400 mr-2" />
                         )}
-                        <span>{bet.amount.toFixed(3)} ETH</span>
+                        <span>{formatBetCurrency(bet.currency, bet.amount)}</span>
                       </div>
                       <span className={bet.win_amount > 0 ? 'text-green-400' : 'text-red-400'}>
-                        {bet.win_amount > 0 ? `+${bet.win_amount.toFixed(3)}` : `-${bet.amount.toFixed(3)}`}
+                        {bet.win_amount > 0
+                          ? `+${formatBetCurrency(bet.currency, bet.win_amount)}`
+                          : `-${formatBetCurrency(bet.currency, bet.amount)}`}
                       </span>
                     </div>
                   ))}
