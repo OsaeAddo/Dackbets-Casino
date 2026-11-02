@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import { MailIcon, ExternalLinkIcon, RefreshCwIcon, CheckCircleIcon } from 'luci
 import { apiClient } from '@/lib/api/client';
 import { toast } from 'sonner';
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [email, setEmail] = useState<string>('');
@@ -166,5 +166,19 @@ export default function VerifyEmailPage() {
                 </CardContent>
             </Card>
         </div>
+    );
+}
+
+export default function VerifyEmailPage() {
+    return (
+        <Suspense
+            fallback={
+                <div className="min-h-screen flex items-center justify-center px-4">
+                    Loading...
+                </div>
+            }
+        >
+            <VerifyEmailContent />
+        </Suspense>
     );
 }
