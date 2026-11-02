@@ -1,0 +1,13 @@
+[tool.ruff]
+# Rule selection intentionally follows the ruff version pinned in
+# requirements-dev.txt. Bump the pin deliberately and review any new findings
+# rather than letting an unpinned upgrade change the gate.
+target-version = "py311"
+line-length = 88
+src = ["app", "tests"]
+extend-exclude = [".venv"]
+
+[tool.ruff.lint]
+# FastAPI uses function calls (Depends/Header) as argument defaults by design.
+# This is the documented exception for B008 in ASGI applications.
+per-file-ignores = { "app/api/*.py" = ["B008"] }

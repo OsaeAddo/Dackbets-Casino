@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
-from typing import Dict, Optional, Any
 from enum import Enum
+from typing import Any
 
 from app.models import casino_models
 from app.wallets.service import WalletService
@@ -34,7 +34,7 @@ class WebhookProcessor:
         self.provider = provider
         self.wallet_service = WalletService()
     
-    async def process_deposit(self, event: DepositEvent) -> Dict[str, Any]:
+    async def process_deposit(self, event: DepositEvent) -> dict[str, Any]:
         """
         Process a deposit webhook event
         1. Find wallet by address
@@ -101,10 +101,10 @@ class WebhookProcessor:
             }
             
         except Exception as e:
-            logger.error(f"Failed to credit deposit {event.tx_hash}: {str(e)}")
+            logger.error(f"Failed to credit deposit {event.tx_hash}: {e!s}")
             return {"status": "failed", "reason": str(e)}
     
-    async def _find_wallet_by_address(self, currency: str, address: str) -> Optional[Dict]:
+    async def _find_wallet_by_address(self, currency: str, address: str) -> dict | None:
         """Find wallet by currency and address"""
         from app.database import db
         result = db.client.table("casino_wallets") \
@@ -114,7 +114,7 @@ class WebhookProcessor:
             .execute()
         return result.data[0] if result.data else None
     
-    async def _find_transaction_by_hash(self, tx_hash: str) -> Optional[Dict]:
+    async def _find_transaction_by_hash(self, tx_hash: str) -> dict | None:
         """Check if transaction already processed"""
         from app.database import db
         result = db.client.table("casino_transactions") \
@@ -138,7 +138,7 @@ class MockTatumWebhook:
     async def simulate_deposit(self, 
                                currency: str = "ETH",
                                amount: float = 0.1,
-                               address: Optional[str] = None,
+                               address: str | None = None,
                                confirmations: int = 12):
         """Simulate a deposit webhook from Tatum"""
         

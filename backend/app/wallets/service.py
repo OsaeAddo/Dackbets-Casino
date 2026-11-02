@@ -1,13 +1,11 @@
+import logging
 import uuid
 from datetime import datetime, timedelta
-from typing import Dict, List
-from supabase import create_client
-# from tatum_sdk_python import TatumSDK, Network
 
+# from tatum_sdk_python import TatumSDK, Network
 from app.config import settings
 from app.models import casino_models
-
-import logging
+from supabase import create_client
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +13,7 @@ class WalletService:
     def __init__(self):
         self.client = create_client(settings.supabase_url, settings.supabase_key)
     
-    async def get_or_create_wallet(self, user_id: str, currency: str) -> Dict:
+    async def get_or_create_wallet(self, user_id: str, currency: str) -> dict:
         """Get existing wallet or create new one"""
         try:
             response = self.client.table("casino_wallets").select("*").eq(
@@ -44,10 +42,10 @@ class WalletService:
             return result.data[0] if result.data else wallet_data
             
         except Exception as e:
-            logger.error(f"Wallet creation error: {str(e)}")
+            logger.error(f"Wallet creation error: {e!s}")
             raise
     
-    async def create_deposit(self, user_id: str, currency: str, amount: float) -> Dict:
+    async def create_deposit(self, user_id: str, currency: str, amount: float) -> dict:
         """Create a deposit record"""
         try:
             # Get wallet
@@ -80,10 +78,10 @@ class WalletService:
             }
             
         except Exception as e:
-            logger.error(f"Deposit creation error: {str(e)}")
+            logger.error(f"Deposit creation error: {e!s}")
             raise
     
-    async def create_withdrawal(self, user_id: str, currency: str, amount: float, address: str) -> Dict:
+    async def create_withdrawal(self, user_id: str, currency: str, amount: float, address: str) -> dict:
         """Create a withdrawal request"""
         try:
             # Check balance
@@ -125,10 +123,10 @@ class WalletService:
             }
             
         except Exception as e:
-            logger.error(f"Withdrawal creation error: {str(e)}")
+            logger.error(f"Withdrawal creation error: {e!s}")
             raise
     
-    async def get_user_transactions(self, user_id: str, limit: int = 50, offset: int = 0) -> List[Dict]:
+    async def get_user_transactions(self, user_id: str, limit: int = 50, offset: int = 0) -> list[dict]:
         """Get user's transaction history"""
         try:
             response = self.client.table("casino_transactions").select("*").eq(
@@ -137,7 +135,7 @@ class WalletService:
             
             return response.data
         except Exception as e:
-            logger.error(f"Transactions query error: {str(e)}")
+            logger.error(f"Transactions query error: {e!s}")
             raise
         
 wallet_service = WalletService()

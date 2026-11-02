@@ -1,5 +1,7 @@
-from supabase import create_client, Client
+from supabase import Client, create_client
+
 from app.config import settings
+
 
 class SupabaseDB:
     def __init__(self):
@@ -79,7 +81,7 @@ class SupabaseDB:
                 # logger.debug(f"No user found for email: {email}")
                 return None
                 
-        except Exception as e:
+        except Exception:
             # logger.error(f"Error fetching user by email {email}: {str(e)}")
             return None
         

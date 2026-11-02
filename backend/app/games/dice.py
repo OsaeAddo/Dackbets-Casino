@@ -1,8 +1,9 @@
+import logging
 import random
 import uuid
 from datetime import datetime
-from typing import Dict, Any
-import logging
+from typing import Any
+
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -11,7 +12,7 @@ class DiceGame:
     def __init__(self):
         self.house_edge = settings.house_edge_dice / 100  # Convert percentage to decimal
     
-    def play(self, bet_amount: float, parameters: Dict[str, Any]) -> Dict[str, Any]:
+    def play(self, bet_amount: float, parameters: dict[str, Any]) -> dict[str, Any]:
         """
         Play dice game
         
@@ -73,5 +74,5 @@ class DiceGame:
             }
             
         except Exception as e:
-            logger.error(f"Dice game error: {str(e)}")
+            logger.error(f"Dice game error: {e!s}")
             raise

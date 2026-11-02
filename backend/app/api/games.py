@@ -1,23 +1,22 @@
-from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException, status
-from typing import List, Optional
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from app.models import casino_models
 from app.config import settings
-from app.dependencies import get_current_user_dep
 from app.database import db
+from app.dependencies import get_current_user_dep
 from app.games.dice import DiceGame
+from app.models import casino_models
 from app.schemas import (
     BetLimit,
     BetLimitsResponse,
-    GameHistoryResponse,
-    BetResponse,
     BetRequest,
+    BetResponse,
     CasinoUser,
-    GameType,
     Currency,
+    GameHistoryResponse,
+    GameType,
 )
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 
 router = APIRouter(prefix="/games", tags=["Games"])
 
@@ -125,7 +124,7 @@ async def place_bet(
             result=result,
             win_amount=win_amount,
             new_balance=updated_profile.get("balance", {}) or {},
-            timestamp=datetime.now(timezone.utc).isoformat()
+            timestamp=datetime.now(UTC).isoformat()
         )
 
     except HTTPException:
@@ -138,11 +137,11 @@ async def place_bet(
         )
 
 
-@router.get("/history", response_model=List[GameHistoryResponse])
+@router.get("/history", response_model=list[GameHistoryResponse])
 async def get_game_history(
     limit: int = 50,
     offset: int = 0,
-    game_type: Optional[GameType] = None,
+    game_type: GameType | None = None,
     user: CasinoUser = Depends(get_current_user_dep)
 ):
     """Get user's game history"""

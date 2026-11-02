@@ -1,23 +1,21 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from datetime import datetime, timezone
-from typing import Optional
+import logging
+from datetime import UTC, datetime
 
 from app.auth import auth_service
 from app.config import settings
-from app.dependencies import get_current_user_dep
 from app.database import db
+from app.dependencies import get_current_user_dep
 from app.models import casino_models
 from app.schemas import (
     CasinoUser,
     SignupResponse,
     TokenResponse,
     UserResponse,
-    UserSignUp,
     UserSignIn,
+    UserSignUp,
 )
-
-import logging
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 logger = logging.getLogger(__name__)
@@ -26,7 +24,7 @@ logger = logging.getLogger(__name__)
 security = HTTPBearer()
 
 
-async def _ensure_user_profile(user_id: str, email: str, username: Optional[str] = None) -> dict:
+async def _ensure_user_profile(user_id: str, email: str, username: str | None = None) -> dict:
     """Create the casino profile, tolerating a profile that already exists."""
     try:
         await casino_models.create_user_profile(user_id, email, username)
@@ -232,7 +230,7 @@ async def get_current_user_info(user: CasinoUser = Depends(get_current_user_dep)
         id=user.id,
         email=user.email,
         username=user.username or profile.get("username"),
-        created_at=profile.get("created_at") or datetime.now(timezone.utc).isoformat(),
+        created_at=profile.get("created_at") or datetime.now(UTC).isoformat(),
         balance=profile.get("balance", {}) or {},
         kyc_status=profile.get("kyc_status", "pending"),
         level=profile.get("level", 1),

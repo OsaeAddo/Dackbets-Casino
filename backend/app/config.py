@@ -1,4 +1,3 @@
-from typing import Dict, List, Optional, Tuple
 
 from pydantic_settings import BaseSettings
 
@@ -17,12 +16,12 @@ class Settings(BaseSettings):
     # CORS
     frontend_url: str = "http://localhost:3000"
     # Optional comma-separated allowlist, e.g. "https://app.example.com,https://staging.example.com"
-    frontend_urls: Optional[str] = None
+    frontend_urls: str | None = None
 
     # Casino Settings
     casino_name: str = "CryptoCasino"
     default_currency: str = "USD"
-    supported_cryptos: List[str] = ["BTC", "ETH", "USDT", "USDC", "SOL", "BNB"]
+    supported_cryptos: list[str] = ["BTC", "ETH", "USDT", "USDC", "SOL", "BNB"]
 
     # House Edge (in percentage)
     house_edge_slots: float = 3.0
@@ -34,7 +33,7 @@ class Settings(BaseSettings):
     # Global fallback limits. Per-currency values below override these.
     min_bet_amount: float = 1.0
     max_bet_amount: float = 10000.0
-    min_bet_amounts: Dict[str, float] = {
+    min_bet_amounts: dict[str, float] = {
         "BTC": 0.0001,
         "ETH": 0.001,
         "USDT": 10.0,
@@ -42,7 +41,7 @@ class Settings(BaseSettings):
         "SOL": 0.01,
         "BNB": 0.01,
     }
-    max_bet_amounts: Dict[str, float] = {
+    max_bet_amounts: dict[str, float] = {
         "BTC": 10.0,
         "ETH": 100.0,
         "USDT": 100000.0,
@@ -64,8 +63,8 @@ class Settings(BaseSettings):
     }
 
     # Email Settings
-    mail_username: Optional[str] = None
-    mail_password: Optional[str] = None
+    mail_username: str | None = None
+    mail_password: str | None = None
     mail_from: str = "noreply@cryptocasino.com"
     mail_from_name: str = "CryptoCasino"
     mail_port: int = 587
@@ -85,7 +84,7 @@ class Settings(BaseSettings):
     withdrawal_daily_limit: float = 10000.0
 
     @property
-    def allowed_origins(self) -> List[str]:
+    def allowed_origins(self) -> list[str]:
         """Return the exact CORS origins allowed to send credentialed requests."""
         raw_origins = [self.frontend_url]
         if self.frontend_urls:
@@ -99,7 +98,7 @@ class Settings(BaseSettings):
                 origins.append(normalized)
         return origins
 
-    def get_bet_limits(self, currency: str) -> Tuple[float, float]:
+    def get_bet_limits(self, currency: str) -> tuple[float, float]:
         """Return (min, max) bet limits for a currency, with global fallbacks."""
         code = currency.upper()
         return (

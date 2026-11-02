@@ -1,6 +1,6 @@
 # app/api/router.py
+from app.api import admin, auth, casino, games, profile, wallet, webhooks
 from fastapi import APIRouter
-from app.api import auth, casino, profile, wallet, games, admin, webhooks
 
 api_router = APIRouter()
 

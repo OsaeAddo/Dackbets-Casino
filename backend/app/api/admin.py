@@ -1,8 +1,7 @@
-from typing import Dict
-from fastapi import APIRouter, Header, HTTPException, status
-from app.models import casino_models
-
 import logging
+
+from app.models import casino_models
+from fastapi import APIRouter, Header, HTTPException, status
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 logger = logging.getLogger(__name__)
@@ -14,7 +13,7 @@ logger = logging.getLogger(__name__)
 @router.post("users/{user_id}/balance", tags=["Admin"])
 async def admin_adjust_balance(
     user_id: str,
-    adjustment: Dict[str, float],
+    adjustment: dict[str, float],
     authorization: str = Header(None)
 ):
     """Admin: Adjust user balance"""
@@ -25,7 +24,7 @@ async def admin_adjust_balance(
         
         return {"message": "Balance updated successfully"}
     except Exception as e:
-        logger.error(f"Admin balance error: {str(e)}")
+        logger.error(f"Admin balance error: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)

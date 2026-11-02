@@ -1,9 +1,8 @@
-from supabase import create_client
-from app.config import settings
-from app.database import db
-from datetime import datetime
-from typing import Optional, Dict, Any
 import json
+from datetime import datetime
+from typing import Any
+
+from app.database import db
 
 # Schema for casino models
 
@@ -13,7 +12,7 @@ class CasinoModels:
         self.admin_client = db.admin_client  # Admin client (bypasses RLS)
     
     # User Profiles (extends Supabase auth.users)
-    async def create_user_profile(self, user_id: str, email: str, username: Optional[str] = None):
+    async def create_user_profile(self, user_id: str, email: str, username: str | None = None):
         """Create extended user profile in casino_profiles table"""
         profile_data = {
             "user_id": user_id,
@@ -92,7 +91,7 @@ class CasinoModels:
         currency: str,
         amount: float,
         status: str = "pending",
-        metadata: Optional[Dict] = None
+        metadata: dict | None = None
     ):
         """Create transaction record"""
         tx_data = {
@@ -115,7 +114,7 @@ class CasinoModels:
         game_type: str,
         currency: str,
         amount: float,
-        result: Dict[str, Any],
+        result: dict[str, Any],
         win_amount: float
     ):
         """Record a bet"""
