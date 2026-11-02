@@ -35,7 +35,9 @@ class CasinoModels:
         response = client.table("casino_profiles").select("*").eq("user_id", user_id).execute()
         
         profile = response.data[0] if response.data else None
-        
+        if profile is None:
+            return None
+
         # Parse JSON fields if they're strings
         json_fields = ['balance', 'total_wagered', 'total_won']
         for field in json_fields:

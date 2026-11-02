@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field, validator
+from pydantic import BaseModel, EmailStr, Field, ValidationInfo, field_validator
 from typing import Optional, List, Dict, Any
 from enum import Enum
 
@@ -60,16 +60,11 @@ class HealthResponse(BaseModel):
 # ============= CASINO SCHEMAS =============
 
 class CasinoUser(BaseModel):
-    """Combined user object with auth data and casino profile"""
+    """Combined user object with normalized auth data and casino profile."""
     id: str
     email: str
     username: Optional[str] = None
-    profile: Dict[str, Any]
-    
-    def __getitem__(self, key):
-        return getattr(self, key)
-    class Config:
-        arbitrary_types_allowed = True  # Allows storing the raw Supabase user
+    profile: Dict[str, Any] = Field(default_factory=dict)
 
 class GameType(str, Enum):
     SLOTS = "slots"
@@ -118,8 +113,9 @@ class DepositRequest(BaseModel):
     currency: Currency
     amount: float
     
-    @validator('amount')
-    def amount_must_be_positive(cls, v):
+    @field_validator('amount')
+    @classmethod
+    def amount_must_be_positive(cls, v: float) -> float:
         if v <= 0:
             raise ValueError('Amount must be positive')
         return v
@@ -129,8 +125,9 @@ class WithdrawalRequest(BaseModel):
     amount: float
     address: str
     
-    @validator('amount')
-    def amount_must_be_positive(cls, v):
+    @field_validator('amount')
+    @classmethod
+    def amount_must_be_positive(cls, v: float) -> float:
         if v <= 0:
             raise ValueError('Amount must be positive')
         return v
@@ -159,11 +156,11 @@ class BetRequest(BaseModel):
     amount: float
     parameters: Dict[str, Any] = Field(default_factory=dict)
     
-    @validator('amount')
-    def validate_amount(cls, v, values):
-        if 'game_type' in values and values['game_type'] == GameType.DICE: #update this later to include all games with minimum bet requirements
-            if v < 0.000001:  # Minimum for dice
-                raise ValueError('Amount too small for dice game')
+    @field_validator('amount')
+    @classmethod
+    def validate_amount(cls, v: float, info: ValidationInfo) -> float:
+        if info.data.get('game_type') == GameType.DICE and v < 0.000001:
+            raise ValueError('Amount too small for dice game')
         return v
 
 class BetResponse(BaseModel):
@@ -175,6 +172,14 @@ class BetResponse(BaseModel):
     win_amount: float = 0.0
     new_balance: Dict[str, float]
     timestamp: str
+
+class BetLimit(BaseModel):
+    min: float
+    max: float
+
+class BetLimitsResponse(BaseModel):
+    limits: Dict[str, BetLimit]
+    defaults: BetLimit
 
 class GameHistoryResponse(BaseModel):
     bet_id: str
