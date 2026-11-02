@@ -84,16 +84,27 @@ Open <http://localhost:3000>.
 ## Tests and checks
 
 ```bash
-# Backend
-cd backend
-pip install -r requirements-dev.txt
+# Backend (from backend/)
+pip install -r requirements.txt -r requirements-dev.txt
+ruff check app tests
 pytest
 
-# Frontend
-cd frontend
+# Frontend (from frontend/)
+npm ci
 npm run lint
+npx tsc --noEmit
 npm run build
 ```
+
+`npm run lint` fails on any warning. To run the full CI suite locally in one
+shot:
+
+```bash
+PYTHON=/path/to/backend/.venv/bin/python ./scripts/verify.sh
+```
+
+GitHub Actions runs the same checks on every push to `main` and every pull
+request (Python 3.12 and Node 22); see `.github/workflows/ci.yml`.
 
 ## Demo-only constraints
 
