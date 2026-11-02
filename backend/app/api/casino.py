@@ -1,11 +1,9 @@
-from fastapi import APIRouter
-from datetime import datetime
+import logging
+from datetime import UTC, datetime
 
 from app.database import db
-from app.schemas import HealthResponse, CasinoStateResponse
-
-import logging
-
+from app.schemas import CasinoStateResponse, HealthResponse
+from fastapi import APIRouter
 
 router = APIRouter(prefix="/casino", tags=["Casino"])
 logger = logging.getLogger(__name__)
@@ -17,15 +15,15 @@ logger = logging.getLogger(__name__)
 async def casino_health():
     """Check casino health"""
     try:
-        test_connection = db.client.auth.get_session()
+        db.client.auth.get_session()
         db_status = "connected"
-    except Exception as e:
-        db_status = f"error: {str(e)}"
+    except Exception as e:  # noqa: BLE001 - API boundary: convert unexpected failures into an HTTP error response
+        db_status = f"error: {e!s}"
     
     return HealthResponse(
         status="healthy",
         service="crypto-casino",
-        timestamp=datetime.utcnow().isoformat(),
+        timestamp=datetime.now(UTC).isoformat(),
         database=db_status,
         casino_open=True
     )

@@ -1,5 +1,5 @@
+
 from fastapi import Header, HTTPException, status
-from typing import Optional
 
 from app.auth import auth_service
 from app.schemas import CasinoUser
@@ -7,8 +7,8 @@ from app.schemas import CasinoUser
 
 # Dependency to get current user
 async def get_current_user_dep(
-    authorization: Optional[str] = Header(None),
-    x_supabase_token: Optional[str] = Header(None)
+    authorization: str | None = Header(None),
+    x_supabase_token: str | None = Header(None)
 ) -> CasinoUser:
     # Check for Authorization header
     if not authorization or not authorization.startswith("Bearer "):

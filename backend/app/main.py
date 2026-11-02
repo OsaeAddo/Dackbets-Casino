@@ -1,18 +1,17 @@
-from pathlib import Path
-from dotenv import load_dotenv
-from fastapi import FastAPI, Depends, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi.responses import JSONResponse
 import logging
+from pathlib import Path
+
+from dotenv import load_dotenv
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.security import HTTPBearer
 
 env_path = Path(__file__).parent.parent / ".env" # Points to 'backend/'
 load_dotenv(dotenv_path=env_path)
 
 from app import config
-from app.auth import auth_service
 from app.api.router import api_router
-
 
 # Enable debug logging
 logging.basicConfig(

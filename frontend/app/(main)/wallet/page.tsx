@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePrices } from '@/lib/contexts/PriceContext';
-import { useAuth } from '@/lib/contexts/AuthContext';
 import { apiClient } from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -42,7 +41,7 @@ interface Transaction {
   amount: number;
   status: 'pending' | 'confirmed' | 'failed';
   created_at: string;
-  metadata?: any;
+  metadata?: { tx_hash?: string } & Record<string, unknown>;
 }
 
 // Currency configuration with icons and colors
@@ -75,7 +74,7 @@ const currencyConfig = {
 
 export default function WalletPage() {
   // const { user } = useAuth();
-  const { prices, loading: pricesLoading, error, refreshPrices, convertToUSD } = usePrices();
+  const { prices, loading: pricesLoading, error, refreshPrices } = usePrices();
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);

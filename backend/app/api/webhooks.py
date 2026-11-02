@@ -1,11 +1,9 @@
 # app/api/webhooks.py
-import uuid
-from fastapi import APIRouter, Request, BackgroundTasks, HTTPException, status
-import json
 import logging
+import uuid
 
-from app.core.tatum_webhook import WebhookProcessor, DepositEvent, WebhookProvider
-from app.config import settings
+from app.core.tatum_webhook import DepositEvent, WebhookProcessor, WebhookProvider
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, status
 
 router = APIRouter(prefix="/webhooks", tags=["Webhooks"])
 logger = logging.getLogger(__name__)
@@ -42,8 +40,8 @@ async def tatum_deposit_webhook(
         
         return {"status": "processing", "tx_id": event.tx_hash}
         
-    except Exception as e:
-        logger.error(f"Tatum webhook error: {str(e)}")
+    except Exception as e:  # noqa: BLE001 - API boundary: convert unexpected failures into an HTTP error response
+        logger.error(f"Tatum webhook error: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
@@ -59,7 +57,7 @@ async def test_deposit_webhook(
     
     payload = await request.json()
     
-    from app.core.tatum_webhook import WebhookProcessor, DepositEvent
+    from app.core.tatum_webhook import DepositEvent, WebhookProcessor
     
     # Create event from payload
     event = DepositEvent(
@@ -82,8 +80,8 @@ async def test_deposit_webhook(
 async def get_last_test_deposit():
     """Helper to quickly test with fixed values"""
     
+
     from app.core.tatum_webhook import MockTatumWebhook
-    import asyncio
     
     processor = WebhookProcessor(provider=WebhookProvider.MOCK)
     mock = MockTatumWebhook(processor)

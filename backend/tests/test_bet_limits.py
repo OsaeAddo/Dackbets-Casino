@@ -1,6 +1,5 @@
 import httpx
 import pytest
-
 from app.config import settings
 from app.dependencies import get_current_user_dep
 from app.games.dice import DiceGame

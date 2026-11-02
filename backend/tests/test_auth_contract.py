@@ -2,7 +2,6 @@ from types import SimpleNamespace
 
 import httpx
 import pytest
-
 from app.auth import auth_service
 from app.database import db
 from app.main import app

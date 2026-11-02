@@ -1,9 +1,8 @@
-from supabase import create_client
-from app.config import settings
-from app.database import db
-from datetime import datetime
-from typing import Optional, Dict, Any
 import json
+from datetime import UTC, datetime
+from typing import Any
+
+from app.database import db
 
 # Schema for casino models
 
@@ -13,7 +12,7 @@ class CasinoModels:
         self.admin_client = db.admin_client  # Admin client (bypasses RLS)
     
     # User Profiles (extends Supabase auth.users)
-    async def create_user_profile(self, user_id: str, email: str, username: Optional[str] = None):
+    async def create_user_profile(self, user_id: str, email: str, username: str | None = None):
         """Create extended user profile in casino_profiles table"""
         profile_data = {
             "user_id": user_id,
@@ -24,7 +23,7 @@ class CasinoModels:
             "total_won": {},
             "kyc_status": "pending",
             "level": 1,
-            "created_at": datetime.utcnow().isoformat()
+            "created_at": datetime.now(UTC).isoformat()
         }
         client = self.admin_client if self.admin_client else self.client
         return client.table("casino_profiles").insert(profile_data).execute()
@@ -65,7 +64,7 @@ class CasinoModels:
         """Update transaction status after confirmation"""
         client = self.admin_client if self.admin_client else self.client
         return client.table("casino_transactions") \
-            .update({"status": status, "updated_at": datetime.utcnow().isoformat()}) \
+            .update({"status": status, "updated_at": datetime.now(UTC).isoformat()}) \
             .filter("metadata->>tx_hash", "eq", tx_hash) \
             .execute()
     
@@ -77,7 +76,7 @@ class CasinoModels:
             "currency": currency,
             "address": address,
             "balance": 0.0,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
             "is_active": True
         }
         client = self.admin_client if self.admin_client else self.client
@@ -92,7 +91,7 @@ class CasinoModels:
         currency: str,
         amount: float,
         status: str = "pending",
-        metadata: Optional[Dict] = None
+        metadata: dict | None = None
     ):
         """Create transaction record"""
         tx_data = {
@@ -102,7 +101,7 @@ class CasinoModels:
             "amount": amount,
             "status": status,
             "metadata": json.dumps(metadata or {}),
-            "created_at": datetime.utcnow().isoformat()
+            "created_at": datetime.now(UTC).isoformat()
         }
         client = self.admin_client if self.admin_client else self.client
         
@@ -115,7 +114,7 @@ class CasinoModels:
         game_type: str,
         currency: str,
         amount: float,
-        result: Dict[str, Any],
+        result: dict[str, Any],
         win_amount: float
     ):
         """Record a bet"""
@@ -126,7 +125,7 @@ class CasinoModels:
             "amount": amount,
             "result": result,
             "win_amount": win_amount,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(UTC).isoformat()
         }
         client = self.admin_client if self.admin_client else self.client
         

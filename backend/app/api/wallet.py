@@ -1,17 +1,20 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from datetime import datetime
-
-from app.dependencies import get_current_user_dep
-from app.wallets.service import wallet_service
-from app.config import settings
-from app.schemas import (
-    Currency, WalletResponse, DepositRequest, DepositResponse, 
-    WithdrawalRequest, WithdrawalResponse, TransactionStatus
-)
-from app.models import casino_models
-
-
 import logging
+from datetime import UTC, datetime
+
+from app.config import settings
+from app.dependencies import get_current_user_dep
+from app.models import casino_models
+from app.schemas import (
+    Currency,
+    DepositRequest,
+    DepositResponse,
+    TransactionStatus,
+    WalletResponse,
+    WithdrawalRequest,
+    WithdrawalResponse,
+)
+from app.wallets.service import wallet_service
+from fastapi import APIRouter, Depends, HTTPException, status
 
 router = APIRouter(prefix="/wallet", tags=["Wallet"])
 logger = logging.getLogger(__name__)
@@ -43,11 +46,11 @@ async def get_deposit_address(
             currency=Currency(wallet.get("currency", currency.value)),
             address=wallet.get("address", ""),
             balance=actual_balance,
-            created_at=wallet.get("created_at", datetime.utcnow().isoformat()),
+            created_at=wallet.get("created_at", datetime.now(UTC).isoformat()),
             is_active=wallet.get("is_active", True)
         )
-    except Exception as e:
-        logger.error(f"Wallet error: {str(e)}")
+    except Exception as e:  # noqa: BLE001 - API boundary: convert unexpected failures into an HTTP error response
+        logger.error(f"Wallet error: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
@@ -75,8 +78,8 @@ async def create_deposit(
             qr_code_url=deposit.get("qr_code_url"),
             expires_at=deposit["expires_at"]
         )
-    except Exception as e:
-        logger.error(f"Deposit error: {str(e)}")
+    except Exception as e:  # noqa: BLE001 - API boundary: convert unexpected failures into an HTTP error response
+        logger.error(f"Deposit error: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
@@ -115,8 +118,8 @@ async def create_withdrawal(
             status=TransactionStatus(withdrawal["status"]),
             estimated_time=withdrawal.get("estimated_time")
         )
-    except Exception as e:
-        logger.error(f"Withdrawal error: {str(e)}")
+    except Exception as e:  # noqa: BLE001 - API boundary: convert unexpected failures into an HTTP error response
+        logger.error(f"Withdrawal error: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
@@ -137,8 +140,8 @@ async def get_transactions(
             offset=offset
         )
         return transactions
-    except Exception as e:
-        logger.error(f"Transactions error: {str(e)}")
+    except Exception as e:  # noqa: BLE001 - API boundary: convert unexpected failures into an HTTP error response
+        logger.error(f"Transactions error: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)

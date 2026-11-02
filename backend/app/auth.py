@@ -1,5 +1,5 @@
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+import logging
+from datetime import UTC, datetime, timedelta
 
 from fastapi import HTTPException, status
 from jose import JWTError, jwt
@@ -9,19 +9,17 @@ from app.database import db
 from app.models import casino_models
 from app.schemas import CasinoUser, TokenData
 
-import logging
-
 logger = logging.getLogger(__name__)
 
 
 class AuthService:
     @staticmethod
-    def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    def create_access_token(data: dict, expires_delta: timedelta | None = None):
         to_encode = data.copy()
         if expires_delta:
-            expire = datetime.now(timezone.utc) + expires_delta
+            expire = datetime.now(UTC) + expires_delta
         else:
-            expire = datetime.now(timezone.utc) + timedelta(
+            expire = datetime.now(UTC) + timedelta(
                 minutes=settings.jwt_access_token_expire_minutes
             )
 
@@ -63,7 +61,7 @@ class AuthService:
                     "session": response.session
                 }
             return None
-        except Exception:
+        except Exception:  # noqa: BLE001 - Authentication fallback: try the next credential source
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid credentials",
@@ -71,8 +69,8 @@ class AuthService:
 
     @staticmethod
     async def _resolve_auth_user(
-        custom_jwt_token: Optional[str] = None,
-        supabase_token: Optional[str] = None,
+        custom_jwt_token: str | None = None,
+        supabase_token: str | None = None,
     ):
         """Resolve a Supabase auth user from either token type.
 
@@ -87,7 +85,7 @@ class AuthService:
                 if user:
                     logger.debug("User found via Supabase token: %s", user.id)
                     return user
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - Authentication fallback: try the next credential source
                 logger.warning("Supabase token failed: %s", str(e))
 
         if custom_jwt_token:
@@ -98,7 +96,7 @@ class AuthService:
                 if user:
                     logger.debug("User found via admin API: %s", user.id)
                     return user
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - Authentication fallback: try the next credential source
                 logger.warning("Custom JWT authentication failed: %s", str(e))
 
         raise HTTPException(
@@ -109,8 +107,8 @@ class AuthService:
 
     @staticmethod
     async def get_current_user(
-        custom_jwt_token: Optional[str] = None,
-        supabase_token: Optional[str] = None
+        custom_jwt_token: str | None = None,
+        supabase_token: str | None = None
     ) -> CasinoUser:
         """
         Get the current user using either:

@@ -1,24 +1,26 @@
-from pydantic import BaseModel, EmailStr, Field, ValidationInfo, field_validator
-from typing import Optional, List, Dict, Any
 from enum import Enum
+from typing import Any
+
+from pydantic import BaseModel, EmailStr, Field, ValidationInfo, field_validator
+
 
 # Request schemas
 class UserSignUp(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=8, max_length=100)
-    username: Optional[str] = None
+    username: str | None = None
     
 class SignupResponse(BaseModel):
     """Response for signup that might require email confirmation"""
     user_id: str
     email: str
     requires_confirmation: bool = False
-    message: Optional[str] = None
-    access_token: Optional[str] = None
-    token_type: Optional[str] = None
-    expires_in: Optional[int] = None
-    supabase_token: Optional[str] = None
-    username: Optional[str] = None
+    message: str | None = None
+    access_token: str | None = None
+    token_type: str | None = None
+    expires_in: int | None = None
+    supabase_token: str | None = None
+    username: str | None = None
     
     
 class UserSignIn(BaseModel):
@@ -26,7 +28,7 @@ class UserSignIn(BaseModel):
     password: str
 
 class TokenData(BaseModel):
-    user_id: Optional[str] = None
+    user_id: str | None = None
     
 # Response schemas
 class TokenResponse(BaseModel):
@@ -35,17 +37,17 @@ class TokenResponse(BaseModel):
     expires_in: int
     user_id: str
     email: str
-    username: Optional[str] = None
-    supabase_token: Optional[str] = None  # Supabase's JWT
-    balance: Optional[Dict[str, float]] = None
+    username: str | None = None
+    supabase_token: str | None = None  # Supabase's JWT
+    balance: dict[str, float] | None = None
 
 
 class UserResponse(BaseModel):
     id: str
     email: str
-    username: Optional[str]
+    username: str | None
     created_at: str
-    balance: Dict[str, float] = Field(default_factory=dict)
+    balance: dict[str, float] = Field(default_factory=dict)
     kyc_status: str = "pending"
     level: int = 1
     wagering_requirement: float = 0.0
@@ -63,8 +65,8 @@ class CasinoUser(BaseModel):
     """Combined user object with normalized auth data and casino profile."""
     id: str
     email: str
-    username: Optional[str] = None
-    profile: Dict[str, Any] = Field(default_factory=dict)
+    username: str | None = None
+    profile: dict[str, Any] = Field(default_factory=dict)
 
 class GameType(str, Enum):
     SLOTS = "slots"
@@ -137,7 +139,7 @@ class DepositResponse(BaseModel):
     currency: Currency
     amount: float
     deposit_address: str
-    qr_code_url: Optional[str] = None
+    qr_code_url: str | None = None
     expires_at: str
 
 class WithdrawalResponse(BaseModel):
@@ -145,16 +147,16 @@ class WithdrawalResponse(BaseModel):
     currency: Currency
     amount: float
     address: str
-    tx_hash: Optional[str] = None
+    tx_hash: str | None = None
     status: TransactionStatus
-    estimated_time: Optional[str] = None
+    estimated_time: str | None = None
 
 # Game Schemas
 class BetRequest(BaseModel):
     game_type: GameType
     currency: Currency
     amount: float
-    parameters: Dict[str, Any] = Field(default_factory=dict)
+    parameters: dict[str, Any] = Field(default_factory=dict)
     
     @field_validator('amount')
     @classmethod
@@ -168,9 +170,9 @@ class BetResponse(BaseModel):
     game_type: GameType
     currency: Currency
     amount: float
-    result: Optional[Dict[str, Any]] = None
+    result: dict[str, Any] | None = None
     win_amount: float = 0.0
-    new_balance: Dict[str, float]
+    new_balance: dict[str, float]
     timestamp: str
 
 class BetLimit(BaseModel):
@@ -178,7 +180,7 @@ class BetLimit(BaseModel):
     max: float
 
 class BetLimitsResponse(BaseModel):
-    limits: Dict[str, BetLimit]
+    limits: dict[str, BetLimit]
     defaults: BetLimit
 
 class GameHistoryResponse(BaseModel):
@@ -187,27 +189,27 @@ class GameHistoryResponse(BaseModel):
     currency: Currency
     amount: float
     win_amount: float
-    result: Dict[str, Any]
+    result: dict[str, Any]
     timestamp: str
 
 # Casino State
 class CasinoStateResponse(BaseModel):
     total_players: int
-    total_wagered: Dict[str, float]
-    biggest_wins: List[Dict[str, Any]]
-    hot_games: List[Dict[str, Any]]
-    jackpot_amount: Dict[str, float]
+    total_wagered: dict[str, float]
+    biggest_wins: list[dict[str, Any]]
+    hot_games: list[dict[str, Any]]
+    jackpot_amount: dict[str, float]
 
 # Admin Schemas
 class AdminUserUpdate(BaseModel):
     user_id: str
-    balance_adjustment: Optional[Dict[str, float]] = None
-    kyc_status: Optional[str] = None
-    is_active: Optional[bool] = None
+    balance_adjustment: dict[str, float] | None = None
+    kyc_status: str | None = None
+    is_active: bool | None = None
 
 class PayoutCalculation(BaseModel):
     game_type: GameType
     bet_amount: float
     currency: Currency
-    player_multiplier: Optional[float] = None
-    win_chance: Optional[float] = None
+    player_multiplier: float | None = None
+    win_chance: float | None = None

@@ -1,7 +1,6 @@
 from types import SimpleNamespace
 
 import pytest
-
 from app.models import casino_models
 
 
