@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { apiClient } from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -29,6 +29,7 @@ import {
   FaEthereum
 } from 'react-icons/fa';
 import { SiTether } from 'react-icons/si';
+import type { IconType } from 'react-icons';
 import { toast } from 'sonner';
 
 interface Transaction {
@@ -38,11 +39,11 @@ interface Transaction {
   amount: number;
   status: 'pending' | 'confirmed' | 'failed';
   created_at: string;
-  metadata?: any;
+  metadata?: { tx_hash?: string } & Record<string, unknown>;
 }
 
 // Currency icon mapping
-const currencyIcons: Record<string, { icon: any; color: string }> = {
+const currencyIcons: Record<string, { icon: IconType; color: string }> = {
   ETH: { icon: FaEthereum, color: '#627EEA' },
   BTC: { icon: FaBitcoin, color: '#F7931A' },
   USDT: { icon: SiTether, color: '#26A17B' },
@@ -51,7 +52,6 @@ const currencyIcons: Record<string, { icon: any; color: string }> = {
 
 export default function TransactionHistoryPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
@@ -60,15 +60,7 @@ export default function TransactionHistoryPage() {
   const [hasMore, setHasMore] = useState(true);
   const pageSize = 20;
 
-  useEffect(() => {
-    loadTransactions();
-  }, [page]);
-
-  useEffect(() => {
-    filterTransactions();
-  }, [transactions, search, typeFilter, statusFilter]);
-
-  const loadTransactions = async () => {
+  const loadTransactions = useCallback(async () => {
     try {
       const response = await apiClient.get(`/wallet/transactions?limit=${pageSize}&offset=${(page - 1) * pageSize}`);
       const newTransactions = response.data;
@@ -84,9 +76,13 @@ export default function TransactionHistoryPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page]);
 
-  const filterTransactions = () => {
+  useEffect(() => {
+    loadTransactions();
+  }, [loadTransactions]);
+
+  const filteredTransactions = useMemo(() => {
     let filtered = transactions;
 
     // Search filter
@@ -107,8 +103,8 @@ export default function TransactionHistoryPage() {
       filtered = filtered.filter(tx => tx.status === statusFilter);
     }
 
-    setFilteredTransactions(filtered);
-  };
+    return filtered;
+  }, [transactions, search, typeFilter, statusFilter]);
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -143,15 +139,6 @@ export default function TransactionHistoryPage() {
     if (hasMore) {
       setPage(prev => prev + 1);
     }
-  };
-
-  const getCurrencyIcon = (currency: string) => {
-    const config = currencyIcons[currency];
-    if (config) {
-      const Icon = config.icon;
-      return <Icon className="h-3 w-3" style={{ color: config.color }} />;
-    }
-    return null;
   };
 
   if (loading && page === 1) {

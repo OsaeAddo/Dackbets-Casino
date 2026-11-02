@@ -1,10 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import { apiClient } from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -15,10 +13,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   ArrowLeftIcon,
   UserIcon,
-  MailIcon,
   BellIcon,
   GlobeIcon,
-  MoonIcon,
   SaveIcon,
   Loader2Icon
 } from 'lucide-react';
@@ -26,7 +22,6 @@ import { toast } from 'sonner';
 
 export default function SettingsPage() {
   const { user } = useAuth();
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     username: user?.username || '',
@@ -49,7 +44,7 @@ export default function SettingsPage() {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       toast.success('Settings saved successfully');
-    } catch (error) {
+    } catch {
       toast.error('Failed to save settings');
     } finally {
       setLoading(false);

@@ -1,5 +1,3 @@
-import { apiClient } from '@/lib/api/client';
-
 export interface PriceData {
     [currency: string]: {
         usd: number;

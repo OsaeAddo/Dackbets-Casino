@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/contexts/AuthContext';
+import { useState } from 'react';
+import { isAxiosError } from 'axios';
 import { apiClient } from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,7 +12,6 @@ import {
   ArrowLeftIcon,
   CopyIcon,
   CheckCircleIcon,
-  QrCodeIcon,
   AlertCircleIcon
 } from 'lucide-react';
 // Import crypto icons
@@ -25,12 +23,6 @@ import { SiTether } from 'react-icons/si';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import Image from 'next/image';
-
-interface DepositAddress {
-  currency: string;
-  address: string;
-  qr_code_url?: string;
-}
 
 interface DepositResponse {
   transaction_id: string;
@@ -67,11 +59,8 @@ const currencyConfig = {
 };
 
 export default function DepositPage() {
-  const { user } = useAuth();
-  const router = useRouter();
   const [selectedCurrency, setSelectedCurrency] = useState('ETH');
   const [amount, setAmount] = useState('');
-  const [depositAddress, setDepositAddress] = useState<DepositAddress | null>(null);
   const [depositResponse, setDepositResponse] = useState<DepositResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -81,23 +70,6 @@ export default function DepositPage() {
     value,
     ...config
   }));
-
-  // Load deposit address for selected currency
-  useEffect(() => {
-    if (selectedCurrency) {
-      loadDepositAddress();
-    }
-  }, [selectedCurrency]);
-
-  const loadDepositAddress = async () => {
-    try {
-      const response = await apiClient.get(`/wallet/address/${selectedCurrency}`);
-      setDepositAddress(response.data);
-    } catch (error) {
-      console.error('Failed to load deposit address:', error);
-      toast.error('Failed to load deposit address');
-    }
-  };
 
   const handleCreateDeposit = async () => {
     if (!amount || parseFloat(amount) <= 0) {
@@ -115,8 +87,8 @@ export default function DepositPage() {
       setDepositResponse(response.data);
       setStep('confirm');
       toast.success('Deposit request created');
-    } catch (error: any) {
-      toast.error(error.response?.data?.detail || 'Failed to create deposit');
+    } catch (error) {
+      toast.error(isAxiosError(error) ? (error.response?.data?.detail ?? 'Failed to create deposit') : 'Failed to create deposit');
     } finally {
       setLoading(false);
     }
@@ -249,9 +221,12 @@ export default function DepositPage() {
                     {/* QR Code (if available) */}
                     {depositResponse.qr_code_url && (
                       <div className="flex justify-center">
-                        <img 
+                        <Image 
                           src={depositResponse.qr_code_url} 
                           alt="Deposit QR Code"
+                          width={128}
+                          height={128}
+                          unoptimized
                           className="w-32 h-32"
                         />
                       </div>

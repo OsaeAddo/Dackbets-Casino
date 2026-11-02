@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { 
   ArrowLeftIcon,
@@ -16,8 +15,6 @@ import {
   ShieldIcon,
   SmartphoneIcon,
   MailIcon,
-  CheckCircleIcon,
-  XCircleIcon,
   EyeIcon,
   EyeOffIcon,
   Loader2Icon
@@ -47,7 +44,7 @@ export default function SecurityPage() {
       await new Promise(resolve => setTimeout(resolve, 1000));
       toast.success('Password changed successfully');
       setPasswordData({ current: '', new: '', confirm: '' });
-    } catch (error) {
+    } catch {
       toast.error('Failed to change password');
     } finally {
       setLoading(false);
@@ -61,7 +58,7 @@ export default function SecurityPage() {
       await new Promise(resolve => setTimeout(resolve, 1000));
       setTwoFactorEnabled(!twoFactorEnabled);
       toast.success(twoFactorEnabled ? '2FA disabled' : '2FA enabled');
-    } catch (error) {
+    } catch {
       toast.error('Failed to update 2FA');
     } finally {
       setLoading(false);

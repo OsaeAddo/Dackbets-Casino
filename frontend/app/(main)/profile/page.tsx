@@ -3,34 +3,27 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { apiClient } from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
-  UserIcon, 
   MailIcon, 
   CalendarIcon,
-  ShieldIcon,
   AwardIcon,
   TrendingUpIcon,
-  ClockIcon,
   Dice1Icon,
   WalletIcon,
   SettingsIcon,
   KeyIcon,
-  BarChart3Icon,
-  EditIcon,
   CopyIcon,
-  CheckCircleIcon,
-  AlertCircleIcon
+  CheckCircleIcon
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -57,13 +50,12 @@ interface Activity {
 }
 
 export default function ProfilePage() {
-  const { user, refreshUser } = useAuth();
+  const { user } = useAuth();
   const [stats, setStats] = useState<UserStats | null>(null);
   const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
-  const [idLoaded, setIdLoaded] = useState(false);
 
 
   useEffect(() => {
@@ -73,12 +65,6 @@ export default function ProfilePage() {
       setLoading(false);
     }
   }, [user]); //rerun when user changes
-
-  useEffect(() => {
-    if (user?.id) {
-      setIdLoaded(true);
-    }
-  }, [user?.id]);
 
   const loadProfileData = async () => {
     try {

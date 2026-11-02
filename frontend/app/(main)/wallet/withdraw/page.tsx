@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { isAxiosError } from 'axios';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { apiClient } from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
@@ -54,14 +54,22 @@ const currencyConfig = {
   },
 };
 
+interface WithdrawalResult {
+  amount: number;
+  currency: string;
+  status: string;
+  address: string;
+  tx_hash?: string;
+  estimated_time?: string;
+}
+
 export default function WithdrawPage() {
   const { user, refreshUser } = useAuth();
-  const router = useRouter();
   const [selectedCurrency, setSelectedCurrency] = useState('ETH');
   const [amount, setAmount] = useState('');
   const [address, setAddress] = useState('');
   const [loading, setLoading] = useState(false);
-  const [withdrawalResult, setWithdrawalResult] = useState<any>(null);
+  const [withdrawalResult, setWithdrawalResult] = useState<WithdrawalResult | null>(null);
   const [step, setStep] = useState<'form' | 'confirm'>('form');
 
   const currencies = Object.entries(currencyConfig).map(([value, config]) => ({
@@ -131,8 +139,8 @@ export default function WithdrawPage() {
       setStep('confirm');
       await refreshUser(); // Update balance
       toast.success('Withdrawal request submitted');
-    } catch (error: any) {
-      toast.error(error.response?.data?.detail || 'Withdrawal failed');
+    } catch (error) {
+      toast.error(isAxiosError(error) ? (error.response?.data?.detail ?? 'Withdrawal failed') : 'Withdrawal failed');
     } finally {
       setLoading(false);
     }

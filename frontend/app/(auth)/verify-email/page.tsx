@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState, useEffect } from 'react';
+import { Suspense, useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -16,21 +16,7 @@ function VerifyEmailContent() {
     const [checking, setChecking] = useState(false);
     const [verified, setVerified] = useState(false);
 
-    useEffect(() => {
-        // Get email from localStorage
-        const pendingEmail = localStorage.getItem('pending_email');
-        if (pendingEmail) {
-            setEmail(pendingEmail);
-        }
-
-        // Check if we have a verification token in URL (from email link)
-        const token = searchParams.get('token');
-        if (token) {
-            verifyEmail(token);
-        }
-    }, [searchParams]);
-
-    const verifyEmail = async (token: string) => {
+    const verifyEmail = useCallback(async (token: string) => {
         try {
             setChecking(true);
             // This endpoint will handle email confirmation
@@ -48,12 +34,26 @@ function VerifyEmailContent() {
                     router.push('/dashboard');
                 }, 2000);
             }
-        } catch (error) {
+        } catch {
             toast.error('Verification failed. Please try again.');
         } finally {
             setChecking(false);
         }
-    };
+    }, [router]);
+
+    useEffect(() => {
+        // Get email from localStorage
+        const pendingEmail = localStorage.getItem('pending_email');
+        if (pendingEmail) {
+            setEmail(pendingEmail);
+        }
+
+        // Check if we have a verification token in URL (from email link)
+        const token = searchParams.get('token');
+        if (token) {
+            verifyEmail(token);
+        }
+    }, [searchParams, verifyEmail]);
 
     const openMailpit = () => {
         window.open('http://localhost:54324', '_blank');
@@ -80,7 +80,7 @@ function VerifyEmailContent() {
             } else {
                 toast.info('Email not verified yet. Check your inbox.');
             }
-        } catch (error) {
+        } catch {
             toast.error('Failed to check verification status');
         } finally {
             setChecking(false);
@@ -114,7 +114,7 @@ function VerifyEmailContent() {
                     </div>
                     <CardTitle className="text-2xl">Check Your Email</CardTitle>
                     <CardDescription>
-                        We've sent a verification link to <strong>{email || 'your email'}</strong>
+                        We&apos;ve sent a verification link to <strong>{email || 'your email'}</strong>
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -136,7 +136,7 @@ function VerifyEmailContent() {
                     </div>
 
                     <div className="text-center text-sm text-gray-400">
-                        <p>Didn't receive the email? Check your spam folder or</p>
+                        <p>Didn&apos;t receive the email? Check your spam folder or</p>
                         <Button
                             variant="link"
                             className="text-purple-400"
@@ -151,7 +151,7 @@ function VerifyEmailContent() {
                             ) : (
                                 <>
                                     <RefreshCwIcon className="h-3 w-3 mr-1" />
-                                    I've verified my email
+                                    I&apos;ve verified my email
                                 </>
                             )}
                         </Button>
