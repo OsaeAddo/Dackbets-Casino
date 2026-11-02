@@ -1,1 +1,0 @@
-// Redirect to Home page(app/page.tsx)

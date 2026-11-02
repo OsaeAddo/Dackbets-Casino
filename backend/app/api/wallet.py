@@ -26,14 +26,14 @@ async def get_deposit_address(
     """Get deposit address for a currency"""
     
     try:
-        user_id = user["id"]
+        user_id = user.id
         # Get or create wallet
         wallet = await wallet_service.get_or_create_wallet(
             user_id=user_id,
             currency=currency.value
         )
-        profile = await casino_models.get_user_profile(user_id)
-        profile_balance = profile.get("balance", {})
+        profile = await casino_models.get_user_profile(user_id) or {}
+        profile_balance = profile.get("balance", {}) or {}
         
         # Use profile balance, not wallet balance
         actual_balance = profile_balance.get(currency.value, 0.0)
@@ -62,7 +62,7 @@ async def create_deposit(
     
     try:
         deposit = await wallet_service.create_deposit(
-            user_id=user["id"],
+            user_id=user.id,
             currency=deposit_request.currency.value,
             amount=deposit_request.amount
         )
@@ -100,7 +100,7 @@ async def create_withdrawal(
         
     try:
         withdrawal = await wallet_service.create_withdrawal(
-            user_id=user["id"],
+            user_id=user.id,
             currency=withdrawal_request.currency.value,
             amount=withdrawal_request.amount,
             address=withdrawal_request.address
@@ -132,7 +132,7 @@ async def get_transactions(
     
     try:
         transactions = await wallet_service.get_user_transactions(
-            user_id=user["id"],
+            user_id=user.id,
             limit=limit,
             offset=offset
         )

@@ -49,7 +49,7 @@ export function PriceChart({ currency, days = 7 }: PriceChartProps) {
 
             const data = await response.json();
 
-            const prices = data.prices.map((p: [number, number]) => ({
+            const prices: { date: string; price: number }[] = data.prices.map((p: [number, number]) => ({
                 date: new Date(p[0]).toLocaleDateString(),
                 price: p[1]
             }));

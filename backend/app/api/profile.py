@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 async def get_user_stats(user = Depends(get_current_user_dep)):
     """Get user's gaming statistics"""
     try:
-        user_id = user["id"]
+        user_id = user.id
         
         # Get all user bets
         bets_response = db.client.table("casino_bets") \
@@ -102,7 +102,7 @@ async def get_user_activity(
 ):
     """Get user's recent activity"""
     try:
-        user_id = user["id"]
+        user_id = user.id
         
         # Get recent bets
         bets_response = db.client.table("casino_bets") \
