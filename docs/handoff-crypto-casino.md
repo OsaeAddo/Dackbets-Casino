@@ -21,7 +21,7 @@ sections 1–3 before touching anything. Section 6 is the immediate work order.
 | Sync | branched from `main` @ `3912f19` (merge PR #4, handoff docs) |
 | Working tree | **clean** — the README warning-line removal was reverted by the user |
 | CI on `main` | success — run 41466303130 (CI), 41466311701 (Dependency Graph) |
-| Open PRs | none |
+| Open PRs | **#5** `sprint(04): dependency remediation` — ready for review, awaiting human merge |
 | Dependabot | **210 open** — 7 critical / 88 high / 101 moderate / 14 low. Sprint 4 ships the fixes on the default branch; alerts auto-close after merge |
 | Migrations | **none** — no `supabase/` or `migrations/` directory exists |
 | Stale remote branch | `origin/sprint/01-foundation` still exists (merged, never deleted) |
@@ -58,7 +58,7 @@ green before any change.
       `PyJWT==2.15.1`. Proven by uninstalling `python-jose`, `jose`, `ecdsa`, `rsa`, `pyasn1`
       from the 3.12 venv: `pip check` clean, 8 tests pass (the JWT fallback test round-trips
       encode/decode).
-- [ ] §5.5.7 final `verify.sh` on Python 3.12 / Node 22 + open PR
+- [x] §5.5.7 final `verify.sh` on Python 3.12 / Node 22 + open PR → **PR #5**
 
 Final gate evidence (this session, CI-matching runtimes):
 - clean-room backend: fresh 3.12 venv + `requirements*.txt`, `pip check` clean, 8 tests pass
@@ -334,9 +334,18 @@ already in progress, `git switch sprint/04-dependency-remediation` and read the 
 checklist instead. Recreate the toolchain from §1 (Python 3.12 venv, Node 22) before running
 `scripts/verify.sh`.
 
-**Current next step:** §5.5.7 — run `scripts/verify.sh` once more on Python 3.12.13 /
-Node 22.20.0, then open the ready-for-review PR. Dependabot alerts stay open on the PR and
-close only after merge to `main`.
+**Current next step:** Sprint 4 is complete and **PR #5 is open, ready for review**. A human
+merges it — do not merge it yourself.
+
+After #5 is merged:
+1. Confirm CI on `main` is green and the Vercel preview stayed healthy.
+2. Re-check `gh api "repos/OsaeAddo/crypto-casino/dependabot/alerts?state=open&per_page=100"`
+   — the alerts close only after the fix reaches the default branch. Record the new count in
+   §1.
+3. Start Sprint 5 from §4a: **Supabase migrations** (schema is implicit and
+   unreproducible). This is the next backlog item; Dependabot remediation was item 1.
+4. Optionally clear §4d small cleanups (debug `console.log`s in
+   `frontend/app/(main)/profile/page.tsx`, delete stale `origin/sprint/01-foundation`).
 
 **Copy-paste resume prompt for the new session:**
 
