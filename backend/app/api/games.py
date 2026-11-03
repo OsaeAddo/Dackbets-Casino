@@ -147,7 +147,7 @@ async def get_game_history(
     """Get user's game history"""
     try:
         # Query bets
-        query = db.client.table("casino_bets").select("*").eq("user_id", user.id)
+        query = db.casino_client.table("casino_bets").select("*").eq("user_id", user.id)
 
         if game_type:
             query = query.eq("game_type", game_type.value)

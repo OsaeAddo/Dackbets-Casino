@@ -107,7 +107,7 @@ class WebhookProcessor:
     async def _find_wallet_by_address(self, currency: str, address: str) -> dict | None:
         """Find wallet by currency and address"""
         from app.database import db
-        result = db.client.table("casino_wallets") \
+        result = db.casino_client.table("casino_wallets") \
             .select("*") \
             .eq("currency", currency) \
             .eq("address", address) \
@@ -117,7 +117,7 @@ class WebhookProcessor:
     async def _find_transaction_by_hash(self, tx_hash: str) -> dict | None:
         """Check if transaction already processed"""
         from app.database import db
-        result = db.client.table("casino_transactions") \
+        result = db.casino_client.table("casino_transactions") \
             .select("*") \
             .filter("metadata->>tx_hash", "eq", tx_hash) \
             .execute()
@@ -148,7 +148,7 @@ class MockTatumWebhook:
         # If no address provided, get first wallet from DB
         if not address:
             from app.database import db
-            result = db.client.table("casino_wallets") \
+            result = db.casino_client.table("casino_wallets") \
                 .select("address") \
                 .eq("currency", currency) \
                 .limit(1) \

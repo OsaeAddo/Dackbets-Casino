@@ -3,15 +3,16 @@ import uuid
 from datetime import UTC, datetime, timedelta
 
 # from tatum_sdk_python import TatumSDK, Network
-from app.config import settings
+from app.database import db
 from app.models import casino_models
-from supabase import create_client
 
 logger = logging.getLogger(__name__)
 
 class WalletService:
-    def __init__(self):
-        self.client = create_client(settings.supabase_url, settings.supabase_key)
+    @property
+    def client(self):
+        """Service-role client; casino tables deny anon/authenticated access."""
+        return db.casino_client
     
     async def get_or_create_wallet(self, user_id: str, currency: str) -> dict:
         """Get existing wallet or create new one"""
