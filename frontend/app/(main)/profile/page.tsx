@@ -1,7 +1,7 @@
 // app/(main)/profile/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { apiClient } from '@/lib/api/client';
@@ -58,15 +58,7 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState('overview');
 
 
-  useEffect(() => {
-    if (user) { 
-      loadProfileData();
-    }else {
-      setLoading(false);
-    }
-  }, [user]); //rerun when user changes
-
-  const loadProfileData = async () => {
+  const loadProfileData = useCallback(async () => {
     try {
       // Load user stats
       const statsResponse = await apiClient.get('/profile/stats');
@@ -81,7 +73,18 @@ export default function ProfilePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const run = async () => {
+      if (user) {
+        await loadProfileData();
+      } else {
+        setLoading(false);
+      }
+    };
+    void run();
+  }, [user, loadProfileData]);
 
   const getInitials = () => {
     if (user?.username) {

@@ -67,34 +67,23 @@ export default function DiceGamePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [betAmount, setBetAmount] = useState(0.01);
   const [winChance, setWinChance] = useState(50);
-  const [targetNumber, setTargetNumber] = useState(50);
+  const [lastMinBet, setLastMinBet] = useState(currentCurrency.minBet);
   const [mode, setMode] = useState<'chance' | 'target'>('chance');
   const [clientSeed, setClientSeed] = useState('');
   const [lastBet, setLastBet] = useState<BetResult | null>(null);
   const [recentBets, setRecentBets] = useState<RecentBet[]>([]);
 
+  // Reset the stake to the currency minimum when the selected currency changes.
+  // Adjusting state during render is React's documented replacement for a
+  // synchronising effect here.
+  if (lastMinBet !== currentCurrency.minBet) {
+    setLastMinBet(currentCurrency.minBet);
+    setBetAmount(currentCurrency.minBet);
+  }
+
   // Calculate multiplier based on win chance
   const multiplier = (100 / winChance) * 0.99; // 1% house edge
   const potentialWin = betAmount * multiplier;
-
-  // Update bet amount when currency changes
-  useEffect(() => {
-    setBetAmount(currentCurrency.minBet);
-  }, [currentCurrency.minBet]);
-
-  // Update target when chance changes
-  useEffect(() => {
-    if (mode === 'chance') {
-      setTargetNumber(winChance);
-    }
-  }, [winChance, mode]);
-
-  // Update chance when target changes
-  useEffect(() => {
-    if (mode === 'target') {
-      setWinChance(targetNumber);
-    }
-  }, [targetNumber, mode]);
 
   const loadRecentBets = useCallback(async () => {
     try {
@@ -107,7 +96,10 @@ export default function DiceGamePage() {
 
   // Load recent bets
   useEffect(() => {
-    void loadRecentBets();
+    const run = async () => {
+      await loadRecentBets();
+    };
+    void run();
   }, [loadRecentBets]);
 
   const handleBet = async () => {
@@ -255,14 +247,14 @@ export default function DiceGamePage() {
                   <TabsContent value="target" className="space-y-4 pt-4">
                     <div className="space-y-2">
                       <div className="flex justify-between">
-                        <Label>Target Number: {targetNumber}</Label>
+                        <Label>Target Number: {winChance}</Label>
                         <span className="text-sm text-gray-400">
-                          Win Chance: {targetNumber}%
+                          Win Chance: {winChance}%
                         </span>
                       </div>
                       <Slider
-                        value={[targetNumber]}
-                        onValueChange={(v) => setTargetNumber(v[0])}
+                        value={[winChance]}
+                        onValueChange={(v) => setWinChance(v[0])}
                         min={1}
                         max={99}
                         step={1}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePrices } from '@/lib/contexts/PriceContext';
 import { apiClient } from '@/lib/api/client';
@@ -80,11 +80,7 @@ export default function WalletPage() {
   const [loading, setLoading] = useState(true);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadWalletData();
-  }, []);
-
-  const loadWalletData = async () => {  
+  const loadWalletData = useCallback(async () => {  
     try {
       // Load wallets for supported currencies
       const currencies = ['ETH', 'BTC', 'USDT'];
@@ -110,7 +106,14 @@ export default function WalletPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const run = async () => {
+      await loadWalletData();
+    };
+    void run();
+  }, [loadWalletData]);
 
   const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text);

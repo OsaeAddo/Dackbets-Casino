@@ -122,7 +122,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Check authentication on mount
   useEffect(() => {
-    void checkAuth();
+    const run = async () => {
+      await checkAuth();
+    };
+    void run();
   }, [checkAuth]);
 
   // Listen for storage events (for multi-tab sync)

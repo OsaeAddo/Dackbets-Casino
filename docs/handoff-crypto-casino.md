@@ -37,7 +37,12 @@ green before any change.
       imported `shadcn/tailwind.css`. That preset is now vendored at
       `frontend/app/shadcn-tailwind.css` (provenance comment included). Lockfile shrank by
       ~3.6k lines. verify.sh green (18 pages).
-- [ ] §5.5.3 `next@16.4.4`, `axios@^1.20.0`, `eslint-config-next@16.4.4`
+- [x] §5.5.3 `next@16.4.4`, `axios@1.21.0`, `eslint-config-next@16.4.4` — the new
+      `eslint-config-next` enables `react-hooks/set-state-in-effect` and
+      `@next/next/no-location-assign-relative-destination`. Fixed 12 findings: single
+      `winChance` state on dice (the chance/target pair was always equal), render-phase
+      stake reset, cancellable async effect bodies, `useCallback` loaders, and an absolute
+      redirect URL in the axios 401 interceptor. verify.sh green.
 - [ ] §5.5.4 eslint / typescript-eslint chain refresh
 - [ ] §5.5.5 targeted `overrides`
 - [ ] §5.5.6 PyJWT migration (code + requirements edited, not yet committed)
@@ -301,8 +306,9 @@ already in progress, `git switch sprint/04-dependency-remediation` and read the 
 checklist instead. Recreate the toolchain from §1 (Python 3.12 venv, Node 22) before running
 `scripts/verify.sh`.
 
-**Current next step:** §5.5.3 — bump `next` to `16.4.4`, `axios` to `^1.20.0`,
-`eslint-config-next` to `16.4.4`, reinstall, verify, commit.
+**Current next step:** §5.5.4 — refresh `eslint` / `typescript-eslint` (via
+`eslint-config-next@16.4.4` deps), then §5.5.5 overrides, §5.5.6 PyJWT, §5.5.7 final verify
+and PR.
 
 **Copy-paste resume prompt for the new session:**
 

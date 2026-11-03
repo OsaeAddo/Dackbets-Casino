@@ -79,7 +79,10 @@ export default function TransactionHistoryPage() {
   }, [page]);
 
   useEffect(() => {
-    loadTransactions();
+    const run = async () => {
+      await loadTransactions();
+    };
+    void run();
   }, [loadTransactions]);
 
   const filteredTransactions = useMemo(() => {
