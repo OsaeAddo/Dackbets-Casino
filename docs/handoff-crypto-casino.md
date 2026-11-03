@@ -53,8 +53,12 @@ green before any change.
       critical or high left. Remaining set is the eslint lint chain only
       (`eslint-utils` has no fixed release; `minimatch@3` is only patched at 11.x, so the
       `^3.1.x` parents keep one moderate node). verify.sh green.
-- [ ] §5.5.6 PyJWT migration (code + requirements edited, not yet committed)
-- [ ] §5.5.7 final `verify.sh` + PR
+- [x] §5.5.6 PyJWT migration — `backend/app/auth.py` now imports `jwt` /
+      `jwt.InvalidTokenError`; `requirements.txt` drops `python-jose[cryptography]` and pins
+      `PyJWT==2.15.1`. Proven by uninstalling `python-jose`, `jose`, `ecdsa`, `rsa`, `pyasn1`
+      from the 3.12 venv: `pip check` clean, 8 tests pass (the JWT fallback test round-trips
+      encode/decode).
+- [ ] §5.5.7 final `verify.sh` on Python 3.12 / Node 22 + open PR
 
 ### Local toolchain does NOT match CI
 
@@ -94,6 +98,15 @@ actually running 3.12/22.
 - README verification docs
 
 Verified at merge: `ruff` clean, `pytest` 8 passed, `tsc` clean, `next build` 18 pages.
+
+### Sprint 4 — dependency remediation (branch `sprint/04-dependency-remediation`)
+- Removed unused `shadcn` (vendored its Tailwind preset), `minimatch`, `zod`
+- `next` 16.1.6 → 16.4.4, `axios` 1.13.5 → 1.21.0, `eslint-config-next` 16.4.4
+- `eslint` 9.39.5; targeted `overrides` for the residual dev-only advisories
+- `python-jose` → `PyJWT` 2.15.1
+- `npm audit`: 32 vulnerable nodes (2 critical / 22 high) → 15 nodes, all moderate
+- 12 new lint findings from the upgraded `eslint-config-next` (React Compiler rules) fixed
+  without suppressions
 
 ### Delivered artifacts that still exist
 - Git history and the two PRs above (the review packets in `/tmp/opencode` are gone)
@@ -314,8 +327,9 @@ already in progress, `git switch sprint/04-dependency-remediation` and read the 
 checklist instead. Recreate the toolchain from §1 (Python 3.12 venv, Node 22) before running
 `scripts/verify.sh`.
 
-**Current next step:** §5.5.6 — commit the PyJWT migration (already applied in the working
-tree), then §5.5.7 final verify + PR.
+**Current next step:** §5.5.7 — run `scripts/verify.sh` once more on Python 3.12.13 /
+Node 22.20.0, then open the ready-for-review PR. Dependabot alerts stay open on the PR and
+close only after merge to `main`.
 
 **Copy-paste resume prompt for the new session:**
 

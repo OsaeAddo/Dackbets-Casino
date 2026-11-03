@@ -1,8 +1,9 @@
 import logging
 from datetime import UTC, datetime, timedelta
 
+import jwt
 from fastapi import HTTPException, status
-from jose import JWTError, jwt
+from jwt import InvalidTokenError
 
 from app.config import settings
 from app.database import db
@@ -48,7 +49,7 @@ class AuthService:
             if user_id is None:
                 raise credentials_exception
             return TokenData(user_id=user_id)
-        except JWTError:
+        except InvalidTokenError:
             raise credentials_exception
 
     @staticmethod
