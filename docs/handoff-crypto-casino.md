@@ -16,9 +16,9 @@ sections 1–3 before touching anything. Section 6 is the immediate work order.
 
 | Item | Value |
 | --- | --- |
-| Branch | `main` |
-| HEAD | `8f25223` Merge PR #3 (`sprint/02-quality`) |
-| Sync | `0 ahead / 0 behind` `origin/main` |
+| Branch | `sprint/04-dependency-remediation` (Sprint 4 in progress) |
+| HEAD | see `git log --oneline -1` on the sprint branch |
+| Sync | branched from `main` @ `3912f19` (merge PR #4, handoff docs) |
 | Working tree | **clean** — the README warning-line removal was reverted by the user |
 | CI on `main` | success — run 41466303130 (CI), 41466311701 (Dependency Graph) |
 | Open PRs | none |
@@ -26,6 +26,22 @@ sections 1–3 before touching anything. Section 6 is the immediate work order.
 | Migrations | **none** — no `supabase/` or `migrations/` directory exists |
 | Stale remote branch | `origin/sprint/01-foundation` still exists (merged, never deleted) |
 | Secrets | `backend/.env` is gitignored (`git check-ignore` confirms); `frontend/.env.local` ignored |
+
+### Sprint 4 progress (`sprint/04-dependency-remediation`)
+
+Verified on CI-matching runtimes this session: Python **3.12.13** (`/tmp/opencode/venv312`)
+and Node **22.20.0** (`/tmp/opencode/node-v22.20.0-linux-x64`). Baseline `verify.sh` was
+green before any change.
+
+- [x] §5.5.2 remove `shadcn` / `minimatch` / `zod` — `shadcn` was not JS-unused: `app/globals.css`
+      imported `shadcn/tailwind.css`. That preset is now vendored at
+      `frontend/app/shadcn-tailwind.css` (provenance comment included). Lockfile shrank by
+      ~3.6k lines. verify.sh green (18 pages).
+- [ ] §5.5.3 `next@16.4.4`, `axios@^1.20.0`, `eslint-config-next@16.4.4`
+- [ ] §5.5.4 eslint / typescript-eslint chain refresh
+- [ ] §5.5.5 targeted `overrides`
+- [ ] §5.5.6 PyJWT migration (code + requirements edited, not yet committed)
+- [ ] §5.5.7 final `verify.sh` + PR
 
 ### Local toolchain does NOT match CI
 
@@ -279,6 +295,14 @@ git switch -c sprint/04-dependency-remediation
 ```
 
 Then execute §5.5 in order. Stop after the PR is ready for review.
+
+**Resume protocol (unchanged):** `git switch main && git pull --ff-only`; if Sprint 4 work is
+already in progress, `git switch sprint/04-dependency-remediation` and read the §1 progress
+checklist instead. Recreate the toolchain from §1 (Python 3.12 venv, Node 22) before running
+`scripts/verify.sh`.
+
+**Current next step:** §5.5.3 — bump `next` to `16.4.4`, `axios` to `^1.20.0`,
+`eslint-config-next` to `16.4.4`, reinstall, verify, commit.
 
 **Copy-paste resume prompt for the new session:**
 
