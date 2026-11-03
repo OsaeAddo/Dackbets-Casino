@@ -12,26 +12,62 @@ sections 1–3 before touching anything. Section 6 is the immediate work order.
 
 ---
 
-## 1. Current state (verified 2026-11-03)
+## 1. Current state (verified 2026-11-03, Sprint 5 in progress)
 
 | Item | Value |
 | --- | --- |
-| Branch | `sprint/04-dependency-remediation` (Sprint 4 in progress) |
+| Branch | `sprint/05-supabase-migrations` (Sprint 5 in progress) |
 | HEAD | see `git log --oneline -1` on the sprint branch |
-| Sync | branched from `main` @ `3912f19` (merge PR #4, handoff docs) |
-| Working tree | **clean** — the README warning-line removal was reverted by the user |
-| CI on `main` | success — run 41466303130 (CI), 41466311701 (Dependency Graph) |
-| Open PRs | **#5** `sprint(04): dependency remediation` — ready for review, awaiting human merge |
-| Dependabot | **210 open** — 7 critical / 88 high / 101 moderate / 14 low. Sprint 4 ships the fixes on the default branch; alerts auto-close after merge |
-| Migrations | **none** — no `supabase/` or `migrations/` directory exists |
+| Sync | branched from `main` @ `1973291` (merge PR #5, dependency remediation) |
+| Working tree | clean |
+| CI on `main` | success — CI + Graph Update both green on `1973291` |
+| Open PRs | **#6** `sprint(05): supabase migrations` — ready for review, awaiting human merge |
+| Dependabot | **1 open** (was 210) — moderate `minimatch@3.1.5` in 6 dev-only eslint nodes; fixed upstream in 11.0.1, no 3.x patch. Accepted, see §5.8 |
+| Migrations | **`supabase/migrations/20261103000000_init_casino_schema.sql`** (Sprint 5) |
 | Stale remote branch | `origin/sprint/01-foundation` still exists (merged, never deleted) |
 | Secrets | `backend/.env` is gitignored (`git check-ignore` confirms); `frontend/.env.local` ignored |
 
-### Sprint 4 progress (`sprint/04-dependency-remediation`)
 
-Verified on CI-matching runtimes this session: Python **3.12.13** (`/tmp/opencode/venv312`)
-and Node **22.20.0** (`/tmp/opencode/node-v22.20.0-linux-x64`). Baseline `verify.sh` was
-green before any change.
+### Sprint 5 progress (`sprint/05-supabase-migrations`)
+
+Goal: make the schema explicit and reproducible (§4a). Verified locally with
+Python **3.12.13** and Node **22.20.0**, plus a throwaway **Postgres 18.3**
+container for the SQL.
+
+- [x] `supabase/migrations/20261103000000_init_casino_schema.sql`: five tables
+      (`casino_profiles`, `casino_wallets`, `casino_transactions`, `casino_bets`,
+      `casino_house_stats`), FKs to `auth.users`, JSONB balance maps, RPCs
+      `update_user_balance` / `update_house_stats` / `get_user_by_email`, the
+      `user_profiles` view, updated_at triggers, and indexes for wallet lookup,
+      bet history, transaction history and `metadata->>'tx_hash'`
+- [x] Deposit replay guard: unique partial index on `metadata->>'tx_hash'`; the
+      old check was application-only
+- [x] RLS decision: **enabled deny-by-default** on all five tables. `anon` and
+      `authenticated` have no table grants; the API uses the service-role client.
+      The only anon-callable object is the address-scoped `get_user_by_email` RPC
+      (the view is service-role only, because it exposes every email)
+- [x] Backend alignment: games/profile/webhooks/wallet now use `db.casino_client`
+      / `casino_models.client` (service role); a missing `SUPABASE_SECRET_KEY`
+      raises `AdminClientUnavailableError` instead of a vague permission error
+- [x] `create_transaction` now sends `metadata` as a JSON object. It previously
+      sent `json.dumps(...)`, i.e. a JSON string, so the `->>` dedupe filter
+      would never match
+- [x] `get_user_by_email` uses the scoped RPC rather than selecting the all-user
+      view
+- [x] `supabase/tests/initial_schema.sql` + `backend/tests/test_schema_contract.py`
+      pin RPC names/params and the Python ↔ SQL contract
+- [x] `scripts/validate-migration.sh` applies all migrations + SQL tests to a
+      throwaway Postgres and checks the anon/service-role posture
+- [x] Final `scripts/verify.sh` on Python 3.12 / Node 22 and open PR
+
+Local evidence:
+- `./scripts/validate-migration.sh` — migration applied; negative-balance guard,
+  missing-profile guard, house-stat accumulation, case-insensitive email lookup,
+  duplicate `tx_hash` and non-object metadata checks all fired; anon denied on
+  tables, allowed only on `get_user_by_email`
+- `ruff check app tests` clean; `pytest -q` **14 passed** (8 before, +6 contract tests)
+
+### Sprint 4 final gate (merged)
 
 - [x] §5.5.2 remove `shadcn` / `minimatch` / `zod` — `shadcn` was not JS-unused: `app/globals.css`
       imported `shadcn/tailwind.css`. That preset is now vendored at
@@ -60,7 +96,7 @@ green before any change.
       encode/decode).
 - [x] §5.5.7 final `verify.sh` on Python 3.12 / Node 22 + open PR → **PR #5**
 
-Final gate evidence (this session, CI-matching runtimes):
+Final gate evidence (Sprint 4 session, CI-matching runtimes):
 - clean-room backend: fresh 3.12 venv + `requirements*.txt`, `pip check` clean, 8 tests pass
 - frontend: `npm ci` from the updated lockfile, then `verify.sh` — eslint 0/0,
   tsc clean, `next build` 18/18 pages
@@ -115,10 +151,20 @@ Verified at merge: `ruff` clean, `pytest` 8 passed, `tsc` clean, `next build` 18
 - 12 new lint findings from the upgraded `eslint-config-next` (React Compiler rules) fixed
   without suppressions
 
+### Sprint 5 — Supabase migrations (branch `sprint/05-supabase-migrations`)
+- Versioned schema under `supabase/migrations/`, with SQL behaviour tests and a
+  `scripts/validate-migration.sh` harness that runs against a throwaway Postgres
+- Deny-by-default RLS; all casino table access now uses the service-role client
+- DB-level deposit replay guard via a unique partial index on `metadata->>'tx_hash'`
+- `metadata` is written as JSONB (was a JSON string); email lookup is an
+  address-scoped RPC instead of an all-users view
+- `pytest` 8 → 14 (contract tests pin RPC names/params)
+
 ### Delivered artifacts that still exist
-- Git history and the two PRs above (the review packets in `/tmp/opencode` are gone)
+- Git history and the PRs above (the review packets in `/tmp/opencode` are gone)
 - `README.md`, `.github/workflows/ci.yml`, `scripts/verify.sh`, `backend/pyproject.toml`,
   `backend/requirements-dev.txt`, `frontend/package.json`
+- `supabase/migrations/`, `supabase/tests/`, `scripts/validate-migration.sh`
 
 ---
 
@@ -139,29 +185,40 @@ Verified at merge: `ruff` clean, `pytest` 8 passed, `tsc` clean, `next build` 18
 
 The user explicitly reordered this: **Dependabot first**.
 
-1. **Dependabot remediation** — Section 5 below (immediate)
-2. **Supabase migrations** — schema is implicit and unreproducible
-3. **Phase 1 security** — admin auth, webhook HMAC, webhook idempotency
+1. ~~**Dependabot remediation**~~ — done, Sprint 4; 210 → 1 accepted dev-only alert (§5.8)
+2. ~~**Supabase migrations**~~ — done, Sprint 5 (§2); no longer implicit
+3. **Phase 1 security** — admin auth, webhook HMAC, webhook idempotency —
+   **immediate next**, and the `check-verification` auth bypass below comes first
 4. **Real DB health probe**
 5. **Small cleanups** — debug `console.log`s, stale remote branch
 
-### 4a. Supabase migrations (after Dependabot)
-No schema lives in the repo. Needs:
-- `supabase/migrations/<ts>_init_casino_schema.sql` for `casino_profiles`,
-  `casino_wallets`, `casino_transactions`, `casino_bets`
-- RPCs `update_user_balance`, `update_house_stats` matching current Python call signatures
-- `user_profiles` view used by the email-verification check
-- Indexes for wallet-by-user+currency, bets-by-user, transactions-by-hash
-- RLS policy decision (everything currently uses the service-role client)
-- README "Supabase objects used by the API" updated (it currently says "no migrations yet")
+### 4a. Supabase migrations — delivered in Sprint 5
+`supabase/migrations/20261103000000_init_casino_schema.sql` covers the five tables,
+the three RPCs, the `user_profiles` view, indexes, RLS, and the deposit replay guard.
+Open follow-ups, if the product needs them later:
+- A real chain address generator (the wallet service still fabricates
+  `{currency}_addr_<hex>` placeholders)
+- Per-user JWT-scoped DB access instead of service-role-only, if the frontend ever
+  talks to Supabase directly
+- A migration runner in CI once a Supabase project exists (today only
+  `scripts/validate-migration.sh` against a throwaway Postgres)
 
 ### 4b. Phase 1 security (live gaps, deferred from Sprints 1–2)
+- **`/api/auth/check-verification` is an auth bypass (NEW, found 2026-11-03)**:
+  `backend/app/api/auth.py:136-160` looks up a user by email and, if the address is
+  confirmed, returns an app JWT signed for that user id. Anyone who knows a verified
+  user's email can obtain that user's token. It must verify a Supabase email-confirmation
+  token (or be removed) before the security sprint ships anything else.
+  `POST /auth/verify-email` is also a no-op that returns `success: True` for any token.
 - **Admin auth absent**: `backend/app/api/admin.py:14,34` accept
   `authorization: str = Header(None)` and never use it; `post users/{user_id}/balance`
   is callable by anyone
 - **Webhook HMAC not implemented**: `backend/app/api/webhooks.py:19-21` is a commented stub
 - **Test webhook endpoints are public**: `/webhooks/test/deposit` lets anyone fabricate deposits
-- **No idempotency**: zero `idempot` matches in `backend/app`; replaying a `txId` can double-credit
+- **No idempotency**: the DB now has a unique partial index on deposit
+  `metadata->>'tx_hash'`, but the app still races: two concurrent webhooks can both
+  pass the pre-check, then one insert fails and is reported as `failed` rather than
+  `skipped`. Handle the unique violation explicitly.
 - Session hardening still deferred: tokens in `localStorage`
   (`frontend/lib/contexts/AuthContext.tsx`), no HttpOnly cookie / CSRF / refresh rotation
 
@@ -315,6 +372,22 @@ python3 -c "import json;print(len(json.load(open('/tmp/opencode/dependabot-open.
 Fetch once, then do all analysis offline against the cached JSON and
 `frontend/package-lock.json`.
 
+### 5.8 Residual Dependabot alert (accepted 2026-11-03)
+
+After the Sprint 4 merge the count dropped **210 → 1**:
+
+| Package | Version | Severity | Advisory | Path |
+| --- | --- | --- | --- | --- |
+| `minimatch` | 3.1.5 (6 nodes) | moderate | GHSA-g3hv-75wg-m249 | dev-only eslint chain |
+
+`first_patched_version` is `11.0.1`; 3.x has no patch. The six nodes are pinned by
+`eslint@9.39.5` and `eslint-config-next@16.4.4` plugins (`@eslint/config-array`,
+`@eslint/eslintrc`, `eslint-plugin-import`, `eslint-plugin-jsx-a11y`,
+`eslint-plugin-react`). Overriding 3.x → 11.x is a breaking API change (v3 exports a
+function, v11 exports `{ minimatch }`) and would break the lint chain. The advisory is
+a denial-of-service in glob expansion; no untrusted glob patterns reach it during lint
+or build. **Review when `eslint@10` / `eslint-config-next` drop the 3.x pins.**
+
 ---
 
 ## 6. Next session: start here
@@ -324,26 +397,26 @@ cd <repo root>
 git switch main && git pull --ff-only
 git status -sb                    # expect clean; if dirty, stop and ask
 
-git switch -c sprint/04-dependency-remediation
+git switch -c sprint/06-security
 ```
 
-Then execute §5.5 in order. Stop after the PR is ready for review.
-
-**Resume protocol (unchanged):** `git switch main && git pull --ff-only`; if Sprint 4 work is
-already in progress, `git switch sprint/04-dependency-remediation` and read the §1 progress
+**Resume protocol (unchanged):** `git switch main && git pull --ff-only`; if Sprint 5 work is
+already in progress, `git switch sprint/05-supabase-migrations` and read the §1 progress
 checklist instead. Recreate the toolchain from §1 (Python 3.12 venv, Node 22) before running
-`scripts/verify.sh`.
+`scripts/verify.sh`, and run `./scripts/validate-migration.sh` after touching SQL.
 
-**Current next step:** Sprint 4 is complete and **PR #5 is open, ready for review**. A human
+**Current next step:** Sprint 5 is complete and **PR #6 is open, ready for review**. A human
 merges it — do not merge it yourself.
 
-After #5 is merged:
+After #6 is merged:
 1. Confirm CI on `main` is green and the Vercel preview stayed healthy.
-2. Re-check `gh api "repos/OsaeAddo/crypto-casino/dependabot/alerts?state=open&per_page=100"`
-   — the alerts close only after the fix reaches the default branch. Record the new count in
-   §1.
-3. Start Sprint 5 from §4a: **Supabase migrations** (schema is implicit and
-   unreproducible). This is the next backlog item; Dependabot remediation was item 1.
+2. Apply the migration to the Supabase project (`supabase init` if `supabase/config.toml`
+   is missing, then `supabase link --project-ref <ref> && supabase db push`; or paste
+   `supabase/migrations/20261103000000_init_casino_schema.sql` into the SQL editor). The API
+   will fail every casino table read until this is done, because RLS denies anon access.
+3. Start Sprint 6 from §4b: **Phase 1 security**. Fix the
+   `/api/auth/check-verification` token bypass first, then admin auth, webhook HMAC, and
+   duplicate-race handling.
 4. Optionally clear §4d small cleanups (debug `console.log`s in
    `frontend/app/(main)/profile/page.tsx`, delete stale `origin/sprint/01-foundation`).
 
@@ -351,14 +424,14 @@ After #5 is merged:
 
 > Read `AGENTS.md` and `docs/handoff-crypto-casino.md` in full, then follow the resume
 > protocol: check `git log` / `git status`, recreate the CI-matching toolchain, and run
-> `scripts/verify.sh`. Execute Sprint 4 (Dependabot remediation) per §5.5 in commit-sized
-> steps, updating §1 and §6 of the handoff at each commit boundary. Open a
-> ready-for-review PR and stop.
+> `scripts/verify.sh`. Execute Sprint 6 (Phase 1 security) from §4b in commit-sized steps,
+> starting with the `check-verification` auth bypass, updating §1 and §6 of the handoff at
+> each commit boundary. Open a ready-for-review PR and stop.
 
 `AGENTS.md` is auto-loaded by OpenCode, so the new agent should find that on its own. If it
 is started in plan mode it can only read and plan; switch it to build mode to execute.
 
-Also note: /tmp is empty and local Node/Python are newer than CI, so the first run needs
+Also note: /tmp may be empty and local Node/Python are newer than CI, so the first run needs
 the toolchain steps in §1. That part is not automatically reconstructed from this file.
 
 ---
@@ -419,6 +492,9 @@ Dependabot alerts only close once the fix reaches the default branch, so re-chec
   lightningcss binaries. If `npm ci` is run, expect that repair to be needed again on a
   non-CI Node version.
 - No real Supabase project is configured; auth/profile/bet tests use mocks and placeholders.
+- Migration SQL is validated against **Postgres 18.3** (`postgres:18.3` Docker image). Supabase
+  runs PG15+; the migration only uses features available since PG15 (`security_invoker`,
+  `gen_random_uuid`, `jsonb_set`), but confirm on the project before the first prod apply.
 - `backend/app/__pycache__` contains both `.cpython-312` and `.cpython-314` artifacts —
   harmless, gitignored.
 
@@ -429,7 +505,13 @@ Dependabot alerts only close once the fix reaches the default branch, so re-chec
 - Exact `next` target: Dependabot requires `>=16.4.1`, npm audit recommends `16.4.4`.
   Default is `16.4.4`; change only if the Vercel preview regresses.
 - Whether Phase 1 security is one sprint or split (admin auth + webhook signing could ship
-  separately from session hardening). Recommend splitting: webhooks are exploitable today,
-  cookie migration is a larger frontend change.
-- RLS policy posture for the Supabase migration sprint — service-role-only today, so any
-  RLS is a product decision, not a mechanical one.
+  separately from session hardening). Recommend splitting: webhooks and the
+  `check-verification` bypass are exploitable today; cookie migration is a larger frontend
+  change.
+- RLS posture: **decided in Sprint 5** — enabled deny-by-default, service-role-only API
+  access, one address-scoped anon RPC. Revisit only if the frontend starts talking to
+  Supabase directly; that would need per-user JWT policies on `casino_profiles`,
+  `casino_bets`, `casino_transactions` and `casino_wallets`.
+- Whether `/api/auth/check-verification` should require a Supabase confirmation token or be
+  removed entirely in favour of the standard `/auth/verify` redirect flow. Product call,
+  but it must stop minting tokens from an email lookup.

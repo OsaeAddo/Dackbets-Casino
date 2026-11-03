@@ -23,7 +23,20 @@ class SupabaseDB:
     
     def get_client(self):
         return self.client
-    
+
+    @property
+    def casino_client(self) -> Client:
+        """Client for the casino_* tables.
+
+        RLS on those tables denies anon/authenticated by default, so the API
+        must use the service-role client. Auth calls keep using `client`.
+        """
+        if not self.admin_client:
+            raise AdminClientUnavailableError(
+                "SUPABASE_SECRET_KEY is required: casino tables are service-role only"
+            )
+        return self.admin_client
+
     #User management methods
     def sign_up(self, email: str, password: str):
         return self.client.auth.sign_up({
@@ -60,18 +73,19 @@ class SupabaseDB:
 
     async def get_user_by_email(self, email: str):
         """
-        Get user by email using the user_profiles view
+        Get user by email using the scoped get_user_by_email RPC.
+
+        The RPC is security definer but only ever returns the row matching the
+        supplied address, so the anon key cannot enumerate auth.users.
         """
         try:
-            response = self.client.table("user_profiles") \
-                .select("*") \
-                .eq("email", email) \
-                .maybe_single() \
-                .execute()
-            
-            if response.data:
-                # logger.debug(f"User found for email: {email}")
-                
+            response = self.client.rpc(
+                "get_user_by_email",
+                {"p_email": email},
+            ).execute()
+
+            row = response.data[0] if response.data else None
+            if row:
                 class UserFromView:
                     def __init__(self, data):
                         self.id = data["id"]
@@ -79,14 +93,12 @@ class SupabaseDB:
                         self.email_confirmed_at = data.get("email_confirmed_at")
                         self.created_at = data.get("created_at")
                         self.username = data.get("username")
-                
-                return UserFromView(response.data)
+
+                return UserFromView(row)
             else:
-                # logger.debug(f"No user found for email: {email}")
                 return None
-                
+
         except Exception:  # noqa: BLE001 - Profile lookup: a backend failure must not break signup/login
-            # logger.error(f"Error fetching user by email {email}: {str(e)}")
             return None
         
     

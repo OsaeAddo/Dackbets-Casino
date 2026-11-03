@@ -16,7 +16,7 @@ async def get_user_stats(user = Depends(get_current_user_dep)):
         user_id = user.id
         
         # Get all user bets
-        bets_response = db.client.table("casino_bets") \
+        bets_response = db.casino_client.table("casino_bets") \
             .select("*") \
             .eq("user_id", user_id) \
             .execute()
@@ -55,7 +55,7 @@ async def get_user_stats(user = Depends(get_current_user_dep)):
         win_rate = (winning_bets / total_bets * 100) if total_bets > 0 else 0
         
         # Get user profile for level and join date
-        profile_response = db.client.table("casino_profiles") \
+        profile_response = db.casino_client.table("casino_profiles") \
             .select("level, created_at") \
             .eq("user_id", user_id) \
             .execute()
@@ -106,7 +106,7 @@ async def get_user_activity(
         user_id = user.id
         
         # Get recent bets
-        bets_response = db.client.table("casino_bets") \
+        bets_response = db.casino_client.table("casino_bets") \
             .select("id, game_type, currency, amount, win_amount, timestamp") \
             .eq("user_id", user_id) \
             .order("timestamp", desc=True) \
@@ -114,7 +114,7 @@ async def get_user_activity(
             .execute()
         
         # Get recent transactions
-        tx_response = db.client.table("casino_transactions") \
+        tx_response = db.casino_client.table("casino_transactions") \
             .select("id, transaction_type, currency, amount, status, created_at") \
             .eq("user_id", user_id) \
             .order("created_at", desc=True) \

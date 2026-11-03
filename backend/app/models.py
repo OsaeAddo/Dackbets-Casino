@@ -2,15 +2,23 @@ import json
 from datetime import UTC, datetime
 from typing import Any
 
-from app.database import db
+from app.database import AdminClientUnavailableError, db
 
 # Schema for casino models
 
 class CasinoModels:
     def __init__(self):
-        self.client = db.client  # Regular client (subject to RLS)
-        self.admin_client = db.admin_client  # Admin client (bypasses RLS)
-    
+        self.admin_client = db.admin_client  # Service-role client (bypasses RLS)
+
+    @property
+    def client(self):
+        """Service-role client; casino tables deny anon/authenticated access."""
+        if not self.admin_client:
+            raise AdminClientUnavailableError(
+                "SUPABASE_SECRET_KEY is required: casino tables are service-role only"
+            )
+        return self.admin_client
+
     # User Profiles (extends Supabase auth.users)
     async def create_user_profile(self, user_id: str, email: str, username: str | None = None):
         """Create extended user profile in casino_profiles table"""
@@ -25,12 +33,12 @@ class CasinoModels:
             "level": 1,
             "created_at": datetime.now(UTC).isoformat()
         }
-        client = self.admin_client if self.admin_client else self.client
+        client = self.client
         return client.table("casino_profiles").insert(profile_data).execute()
             
     async def get_user_profile(self, user_id: str):
         """Get user's casino profile"""
-        client = self.admin_client if self.admin_client else self.client
+        client = self.client
         response = client.table("casino_profiles").select("*").eq("user_id", user_id).execute()
         
         profile = response.data[0] if response.data else None
@@ -50,7 +58,7 @@ class CasinoModels:
     async def update_user_balance(self, user_id: str, currency: str, amount: float):
         """Update user's balance atomically"""
         # Use Supabase RPC for atomic operations
-        client = self.admin_client if self.admin_client else self.client  
+        client = self.client  
         return client.rpc(
             "update_user_balance",
             {
@@ -62,7 +70,7 @@ class CasinoModels:
         
     async def update_transaction_status(self, tx_hash: str, status: str):
         """Update transaction status after confirmation"""
-        client = self.admin_client if self.admin_client else self.client
+        client = self.client
         return client.table("casino_transactions") \
             .update({"status": status, "updated_at": datetime.now(UTC).isoformat()}) \
             .filter("metadata->>tx_hash", "eq", tx_hash) \
@@ -79,7 +87,7 @@ class CasinoModels:
             "created_at": datetime.now(UTC).isoformat(),
             "is_active": True
         }
-        client = self.admin_client if self.admin_client else self.client
+        client = self.client
         
         return client.table("casino_wallets").insert(wallet_data).execute()
     
@@ -100,10 +108,12 @@ class CasinoModels:
             "currency": currency,
             "amount": amount,
             "status": status,
-            "metadata": json.dumps(metadata or {}),
+            # Send an object, not a JSON string: the column is jsonb and the
+            # webhook dedupe index reads `metadata ->> 'tx_hash'`.
+            "metadata": metadata or {},
             "created_at": datetime.now(UTC).isoformat()
         }
-        client = self.admin_client if self.admin_client else self.client
+        client = self.client
         
         return client.table("casino_transactions").insert(tx_data).execute()
     
@@ -127,7 +137,7 @@ class CasinoModels:
             "win_amount": win_amount,
             "timestamp": datetime.now(UTC).isoformat()
         }
-        client = self.admin_client if self.admin_client else self.client
+        client = self.client
         
         return client.table("casino_bets").insert(bet_data).execute()
     
@@ -140,7 +150,7 @@ class CasinoModels:
         amount_paid: float
     ):
         """Update house statistics"""
-        client = self.admin_client if self.admin_client else self.client
+        client = self.client
         
         return client.rpc(
             "update_house_stats",
