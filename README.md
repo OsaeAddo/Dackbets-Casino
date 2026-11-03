@@ -5,7 +5,7 @@ project does **not** handle real funds, real KYC, or real withdrawals yet.
 
 ## Stack
 
-- **Backend:** FastAPI, Pydantic v2, Supabase Python SDK, python-jose
+- **Backend:** FastAPI, Pydantic v2, Supabase Python SDK, PyJWT
 - **Frontend:** Next.js 16 (App Router), React 19, TypeScript strict, Tailwind v4, shadcn/ui
 - **Database/Auth:** Supabase (Postgres + Auth)
 
@@ -51,16 +51,33 @@ uvicorn app.main:app --reload --port 8000
 
 Never commit `backend/.env`. The committed template is `backend/.env.example`.
 
-### Supabase objects used by the API
+### Supabase schema
 
-The current code expects these tables/RPCs to exist in Supabase:
+The schema is versioned in [`supabase/migrations/`](supabase/migrations). Apply it with
+the Supabase CLI, or by pasting the `.sql` file into the project's SQL editor.
 
-- `casino_profiles`, `casino_wallets`, `casino_transactions`, `casino_bets`
-- `update_user_balance` and `update_house_stats` RPCs
-- A `user_profiles` view used by the email-verification check
+```bash
+supabase init                    # once, if supabase/config.toml is missing
+supabase link --project-ref <ref>
+supabase db push
+```
 
-There are no migrations in the repository yet; see the Sprint 3 roadmap item for
-schema/ledger work.
+Objects used by the API:
+
+- Tables: `casino_profiles`, `casino_wallets`, `casino_transactions`, `casino_bets`,
+  `casino_house_stats`
+- RPCs: `update_user_balance`, `update_house_stats`, `get_user_by_email`
+- View: `user_profiles` (service-role only)
+
+RLS is enabled on every table and denies `anon`/`authenticated`, so the API must use
+`SUPABASE_SECRET_KEY`. The one anon-callable object is `get_user_by_email`, which
+returns at most the row matching the supplied address.
+
+To apply the migrations and run the SQL contract tests against a throwaway Postgres:
+
+```bash
+./scripts/validate-migration.sh
+```
 
 ## Frontend setup
 
