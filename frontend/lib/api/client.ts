@@ -52,7 +52,10 @@ apiClient.interceptors.response.use(
       // Unauthorized - clear token and redirect to login
       if (typeof window !== 'undefined') {
         localStorage.removeItem('access_token');
-        window.location.href = '/login';
+        // The interceptor lives outside the React tree, so a full navigation is
+        // intentional. Resolve to an absolute URL so the destination cannot be
+        // mistaken for an in-app relative navigation.
+        window.location.href = new URL('/login', window.location.origin).href;
       }
     }
     return Promise.reject(error);

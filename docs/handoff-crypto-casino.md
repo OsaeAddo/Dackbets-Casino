@@ -16,16 +16,56 @@ sections 1–3 before touching anything. Section 6 is the immediate work order.
 
 | Item | Value |
 | --- | --- |
-| Branch | `main` |
-| HEAD | `8f25223` Merge PR #3 (`sprint/02-quality`) |
-| Sync | `0 ahead / 0 behind` `origin/main` |
+| Branch | `sprint/04-dependency-remediation` (Sprint 4 in progress) |
+| HEAD | see `git log --oneline -1` on the sprint branch |
+| Sync | branched from `main` @ `3912f19` (merge PR #4, handoff docs) |
 | Working tree | **clean** — the README warning-line removal was reverted by the user |
 | CI on `main` | success — run 41466303130 (CI), 41466311701 (Dependency Graph) |
-| Open PRs | none |
-| Dependabot | **210 open** — 7 critical / 88 high / 101 moderate / 14 low |
+| Open PRs | **#5** `sprint(04): dependency remediation` — ready for review, awaiting human merge |
+| Dependabot | **210 open** — 7 critical / 88 high / 101 moderate / 14 low. Sprint 4 ships the fixes on the default branch; alerts auto-close after merge |
 | Migrations | **none** — no `supabase/` or `migrations/` directory exists |
 | Stale remote branch | `origin/sprint/01-foundation` still exists (merged, never deleted) |
 | Secrets | `backend/.env` is gitignored (`git check-ignore` confirms); `frontend/.env.local` ignored |
+
+### Sprint 4 progress (`sprint/04-dependency-remediation`)
+
+Verified on CI-matching runtimes this session: Python **3.12.13** (`/tmp/opencode/venv312`)
+and Node **22.20.0** (`/tmp/opencode/node-v22.20.0-linux-x64`). Baseline `verify.sh` was
+green before any change.
+
+- [x] §5.5.2 remove `shadcn` / `minimatch` / `zod` — `shadcn` was not JS-unused: `app/globals.css`
+      imported `shadcn/tailwind.css`. That preset is now vendored at
+      `frontend/app/shadcn-tailwind.css` (provenance comment included). Lockfile shrank by
+      ~3.6k lines. verify.sh green (18 pages).
+- [x] §5.5.3 `next@16.4.4`, `axios@1.21.0`, `eslint-config-next@16.4.4` — the new
+      `eslint-config-next` enables `react-hooks/set-state-in-effect` and
+      `@next/next/no-location-assign-relative-destination`. Fixed 12 findings: single
+      `winChance` state on dice (the chance/target pair was always equal), render-phase
+      stake reset, cancellable async effect bodies, `useCallback` loaders, and an absolute
+      redirect URL in the axios 401 interceptor. verify.sh green.
+- [x] §5.5.4 + §5.5.5 dev chain refresh + targeted `overrides` — `eslint@9.39.5`
+      (latest 9.x, intentionally not 10.x). Overrides: `brace-expansion@1` 1.1.21,
+      `minimatch@3` 3.1.5, `minimatch@10` **11.0.4** (typescript-estree upstream still
+      pins `^10.2.2`; 11 ships a CJS build and lint is green), `browserslist` 4.28.7,
+      `flatted` 3.4.2, `js-yaml` 4.3.2, `picomatch@4` 4.0.4, `source-map-js` 1.2.2,
+      `ajv@6` 6.14.0, `@humanfs/node` 0.16.8.
+      `npm audit`: **32 vulnerable nodes (2 critical / 22 high) → 15, all moderate**, no
+      critical or high left. Remaining set is the eslint lint chain only
+      (`eslint-utils` has no fixed release; `minimatch@3` is only patched at 11.x, so the
+      `^3.1.x` parents keep one moderate node). verify.sh green.
+- [x] §5.5.6 PyJWT migration — `backend/app/auth.py` now imports `jwt` /
+      `jwt.InvalidTokenError`; `requirements.txt` drops `python-jose[cryptography]` and pins
+      `PyJWT==2.15.1`. Proven by uninstalling `python-jose`, `jose`, `ecdsa`, `rsa`, `pyasn1`
+      from the 3.12 venv: `pip check` clean, 8 tests pass (the JWT fallback test round-trips
+      encode/decode).
+- [x] §5.5.7 final `verify.sh` on Python 3.12 / Node 22 + open PR → **PR #5**
+
+Final gate evidence (this session, CI-matching runtimes):
+- clean-room backend: fresh 3.12 venv + `requirements*.txt`, `pip check` clean, 8 tests pass
+- frontend: `npm ci` from the updated lockfile, then `verify.sh` — eslint 0/0,
+  tsc clean, `next build` 18/18 pages
+- `npm audit`: 15 moderate nodes, 0 critical/high; **Dependabot still shows 210 open** —
+  alerts only close when the fix lands on the default branch
 
 ### Local toolchain does NOT match CI
 
@@ -65,6 +105,15 @@ actually running 3.12/22.
 - README verification docs
 
 Verified at merge: `ruff` clean, `pytest` 8 passed, `tsc` clean, `next build` 18 pages.
+
+### Sprint 4 — dependency remediation (branch `sprint/04-dependency-remediation`)
+- Removed unused `shadcn` (vendored its Tailwind preset), `minimatch`, `zod`
+- `next` 16.1.6 → 16.4.4, `axios` 1.13.5 → 1.21.0, `eslint-config-next` 16.4.4
+- `eslint` 9.39.5; targeted `overrides` for the residual dev-only advisories
+- `python-jose` → `PyJWT` 2.15.1
+- `npm audit`: 32 vulnerable nodes (2 critical / 22 high) → 15 nodes, all moderate
+- 12 new lint findings from the upgraded `eslint-config-next` (React Compiler rules) fixed
+  without suppressions
 
 ### Delivered artifacts that still exist
 - Git history and the two PRs above (the review packets in `/tmp/opencode` are gone)
@@ -279,6 +328,24 @@ git switch -c sprint/04-dependency-remediation
 ```
 
 Then execute §5.5 in order. Stop after the PR is ready for review.
+
+**Resume protocol (unchanged):** `git switch main && git pull --ff-only`; if Sprint 4 work is
+already in progress, `git switch sprint/04-dependency-remediation` and read the §1 progress
+checklist instead. Recreate the toolchain from §1 (Python 3.12 venv, Node 22) before running
+`scripts/verify.sh`.
+
+**Current next step:** Sprint 4 is complete and **PR #5 is open, ready for review**. A human
+merges it — do not merge it yourself.
+
+After #5 is merged:
+1. Confirm CI on `main` is green and the Vercel preview stayed healthy.
+2. Re-check `gh api "repos/OsaeAddo/crypto-casino/dependabot/alerts?state=open&per_page=100"`
+   — the alerts close only after the fix reaches the default branch. Record the new count in
+   §1.
+3. Start Sprint 5 from §4a: **Supabase migrations** (schema is implicit and
+   unreproducible). This is the next backlog item; Dependabot remediation was item 1.
+4. Optionally clear §4d small cleanups (debug `console.log`s in
+   `frontend/app/(main)/profile/page.tsx`, delete stale `origin/sprint/01-foundation`).
 
 **Copy-paste resume prompt for the new session:**
 

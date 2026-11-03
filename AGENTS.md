@@ -18,7 +18,7 @@ about to run anything long, or you are near a session limit, update it *before* 
 A demo/play-money crypto casino. It does **not** handle real funds, real KYC, or real
 withdrawals.
 
-- `backend/` — FastAPI, Pydantic v2, Supabase Python SDK, python-jose (PyJWT migration planned)
+- `backend/` — FastAPI, Pydantic v2, Supabase Python SDK, PyJWT
 - `frontend/` — Next.js 16 App Router, React 19, TypeScript strict, Tailwind v4, shadcn/ui
 - API prefix: `/api`; health check at `/api/casino/health`
 

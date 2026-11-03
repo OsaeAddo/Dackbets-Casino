@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { priceService, ExchangeRates } from '@/lib/services/priceService';
 
 interface PriceContextType {
@@ -18,7 +18,7 @@ export function PriceProvider({ children }: { children: React.ReactNode }) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const fetchPrices = async () => {
+    const fetchPrices = useCallback(async () => {
         try {
             setError(null);
             const data = await priceService.fetchPrices();
@@ -29,13 +29,13 @@ export function PriceProvider({ children }: { children: React.ReactNode }) {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const refreshPrices = async () => {
+    const refreshPrices = useCallback(async () => {
         setLoading(true);
         priceService.clearCache();
         await fetchPrices();
-    };
+    }, [fetchPrices]);
 
     const convertToUSD = (currency: keyof ExchangeRates, amount: number): number => {
         if (!prices || !prices[currency]) return 0;
@@ -43,13 +43,16 @@ export function PriceProvider({ children }: { children: React.ReactNode }) {
     };
 
     useEffect(() => {
-        fetchPrices();
+        const run = async () => {
+            await fetchPrices();
+        };
+        void run();
 
         // Refresh every 60 seconds
         const interval = setInterval(fetchPrices, 60000);
 
         return () => clearInterval(interval);
-    }, []);
+    }, [fetchPrices]);
 
     return (
         <PriceContext.Provider value={{

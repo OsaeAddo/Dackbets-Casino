@@ -42,17 +42,20 @@ function VerifyEmailContent() {
     }, [router]);
 
     useEffect(() => {
-        // Get email from localStorage
-        const pendingEmail = localStorage.getItem('pending_email');
-        if (pendingEmail) {
-            setEmail(pendingEmail);
-        }
+        const run = async () => {
+            // Get email from localStorage
+            const pendingEmail = localStorage.getItem('pending_email');
+            if (pendingEmail) {
+                setEmail(pendingEmail);
+            }
 
-        // Check if we have a verification token in URL (from email link)
-        const token = searchParams.get('token');
-        if (token) {
-            verifyEmail(token);
-        }
+            // Check if we have a verification token in URL (from email link)
+            const token = searchParams.get('token');
+            if (token) {
+                await verifyEmail(token);
+            }
+        };
+        void run();
     }, [searchParams, verifyEmail]);
 
     const openMailpit = () => {
