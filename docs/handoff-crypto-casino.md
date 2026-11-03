@@ -43,8 +43,16 @@ green before any change.
       `winChance` state on dice (the chance/target pair was always equal), render-phase
       stake reset, cancellable async effect bodies, `useCallback` loaders, and an absolute
       redirect URL in the axios 401 interceptor. verify.sh green.
-- [ ] §5.5.4 eslint / typescript-eslint chain refresh
-- [ ] §5.5.5 targeted `overrides`
+- [x] §5.5.4 + §5.5.5 dev chain refresh + targeted `overrides` — `eslint@9.39.5`
+      (latest 9.x, intentionally not 10.x). Overrides: `brace-expansion@1` 1.1.21,
+      `minimatch@3` 3.1.5, `minimatch@10` **11.0.4** (typescript-estree upstream still
+      pins `^10.2.2`; 11 ships a CJS build and lint is green), `browserslist` 4.28.7,
+      `flatted` 3.4.2, `js-yaml` 4.3.2, `picomatch@4` 4.0.4, `source-map-js` 1.2.2,
+      `ajv@6` 6.14.0, `@humanfs/node` 0.16.8.
+      `npm audit`: **32 vulnerable nodes (2 critical / 22 high) → 15, all moderate**, no
+      critical or high left. Remaining set is the eslint lint chain only
+      (`eslint-utils` has no fixed release; `minimatch@3` is only patched at 11.x, so the
+      `^3.1.x` parents keep one moderate node). verify.sh green.
 - [ ] §5.5.6 PyJWT migration (code + requirements edited, not yet committed)
 - [ ] §5.5.7 final `verify.sh` + PR
 
@@ -306,9 +314,8 @@ already in progress, `git switch sprint/04-dependency-remediation` and read the 
 checklist instead. Recreate the toolchain from §1 (Python 3.12 venv, Node 22) before running
 `scripts/verify.sh`.
 
-**Current next step:** §5.5.4 — refresh `eslint` / `typescript-eslint` (via
-`eslint-config-next@16.4.4` deps), then §5.5.5 overrides, §5.5.6 PyJWT, §5.5.7 final verify
-and PR.
+**Current next step:** §5.5.6 — commit the PyJWT migration (already applied in the working
+tree), then §5.5.7 final verify + PR.
 
 **Copy-paste resume prompt for the new session:**
 
