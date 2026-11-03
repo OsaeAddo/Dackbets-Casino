@@ -22,7 +22,7 @@ sections 1–3 before touching anything. Section 6 is the immediate work order.
 | Working tree | **clean** — the README warning-line removal was reverted by the user |
 | CI on `main` | success — run 41466303130 (CI), 41466311701 (Dependency Graph) |
 | Open PRs | none |
-| Dependabot | **210 open** — 7 critical / 88 high / 101 moderate / 14 low |
+| Dependabot | **210 open** — 7 critical / 88 high / 101 moderate / 14 low. Sprint 4 ships the fixes on the default branch; alerts auto-close after merge |
 | Migrations | **none** — no `supabase/` or `migrations/` directory exists |
 | Stale remote branch | `origin/sprint/01-foundation` still exists (merged, never deleted) |
 | Secrets | `backend/.env` is gitignored (`git check-ignore` confirms); `frontend/.env.local` ignored |
@@ -59,6 +59,13 @@ green before any change.
       from the 3.12 venv: `pip check` clean, 8 tests pass (the JWT fallback test round-trips
       encode/decode).
 - [ ] §5.5.7 final `verify.sh` on Python 3.12 / Node 22 + open PR
+
+Final gate evidence (this session, CI-matching runtimes):
+- clean-room backend: fresh 3.12 venv + `requirements*.txt`, `pip check` clean, 8 tests pass
+- frontend: `npm ci` from the updated lockfile, then `verify.sh` — eslint 0/0,
+  tsc clean, `next build` 18/18 pages
+- `npm audit`: 15 moderate nodes, 0 critical/high; **Dependabot still shows 210 open** —
+  alerts only close when the fix lands on the default branch
 
 ### Local toolchain does NOT match CI
 
