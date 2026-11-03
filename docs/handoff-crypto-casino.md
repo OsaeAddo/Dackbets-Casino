@@ -21,7 +21,7 @@ sections 1–3 before touching anything. Section 6 is the immediate work order.
 | Sync | branched from `main` @ `1973291` (merge PR #5, dependency remediation) |
 | Working tree | clean |
 | CI on `main` | success — CI + Graph Update both green on `1973291` |
-| Open PRs | Sprint 5 PR, ready for review, awaiting human merge (number assigned on push) |
+| Open PRs | **#6** `sprint(05): supabase migrations` — ready for review, awaiting human merge |
 | Dependabot | **1 open** (was 210) — moderate `minimatch@3.1.5` in 6 dev-only eslint nodes; fixed upstream in 11.0.1, no 3.x patch. Accepted, see §5.8 |
 | Migrations | **`supabase/migrations/20261103000000_init_casino_schema.sql`** (Sprint 5) |
 | Stale remote branch | `origin/sprint/01-foundation` still exists (merged, never deleted) |
@@ -405,10 +405,10 @@ already in progress, `git switch sprint/05-supabase-migrations` and read the §1
 checklist instead. Recreate the toolchain from §1 (Python 3.12 venv, Node 22) before running
 `scripts/verify.sh`, and run `./scripts/validate-migration.sh` after touching SQL.
 
-**Current next step:** Sprint 5 is complete and its **PR is open, ready for review**. A human
+**Current next step:** Sprint 5 is complete and **PR #6 is open, ready for review**. A human
 merges it — do not merge it yourself.
 
-After the Sprint 5 PR is merged:
+After #6 is merged:
 1. Confirm CI on `main` is green and the Vercel preview stayed healthy.
 2. Apply the migration to the Supabase project (`supabase init` if `supabase/config.toml`
    is missing, then `supabase link --project-ref <ref> && supabase db push`; or paste
