@@ -471,24 +471,25 @@ cd <repo root>
 git switch main && git pull --ff-only
 git status -sb                    # expect clean; if dirty, stop and ask
 
-git switch -c sprint/06-security
+git switch -c sprint/07-session-hardening
 ```
 
-**Resume protocol (unchanged):** `git switch main && git pull --ff-only`; if Sprint 5 work is
-already in progress, `git switch sprint/05-supabase-migrations` and read the §1 progress
-checklist instead. Recreate the toolchain from §1 (Python 3.12 venv, Node 22) before running
+**Resume protocol (unchanged):** `git switch main && git pull --ff-only`; if a sprint is
+already in progress, `git switch <branch>` and read the §1 progress checklist instead.
+Recreate the toolchain from §1 (Python 3.12 venv, Node 22) before running
 `scripts/verify.sh`, and run `./scripts/validate-migration.sh` after touching SQL.
 
-**Current next step:** Sprint 5 is **merged and applied to the live project**. The
-adoption follow-up PR is open for review; a human merges it — do not merge it yourself.
+**Current next step:** Sprint 6 (`sprint/06-security-phase-1`) is **ready for review**.
+It removes the `check-verification` token bypass, adds admin-key auth, signs inbound
+webhooks and hides the test endpoints, settles deposit races via the unique index, and
+replaces the fake health probe. A human merges the PR; do not merge it yourself.
 
-After the adoption PR is merged:
+After the Sprint 6 PR is merged:
 1. Confirm CI on `main` is green.
-2. Start Sprint 6 from §4b: **Phase 1 security**. Fix the
-   `/api/auth/check-verification` token bypass first, then admin auth, webhook HMAC, and
-   duplicate-race handling.
-3. Optionally clear §4d small cleanups (debug `console.log`s in
-   `frontend/app/(main)/profile/page.tsx`, delete stale `origin/sprint/01-foundation`).
+2. Start Sprint 7: **session hardening** (§4b last bullet) — move tokens out of
+   `localStorage` into HttpOnly cookies with CSRF protection and refresh rotation.
+3. Optional follow-ups: real chain address generator (§4a), real `/api/casino/state`
+   stats (§4d), and a CI migration runner (§4a).
 
 Do **not** re-apply the baseline migration: `supabase_migrations.schema_migrations`
 already records `20261103000000`, and the live tables hold the original demo data.
