@@ -38,7 +38,11 @@ Goal: close the Phase 1 security gaps in §4b. One commit per item.
       `db.verify_email_token()`; invalid/expired/reused tokens return 400 and no JWT.
       The verify-email page no longer auto-mints a token from an email address; it
       links to sign-in instead. Tests: `backend/tests/test_security.py`.
-- [ ] Admin auth
+- [x] **Admin auth.** `/api/admin/*` now requires `X-Admin-Key`, compared in
+      constant time against `ADMIN_API_KEY`; the API returns 503 when the key is
+      unset (fail closed) and 403 on a missing/wrong key. The two route paths were
+      also corrected from `/api/adminstats` and `/api/adminusers/...` to
+      `/api/admin/stats` and `/api/admin/users/...`.
 - [ ] Webhook HMAC + gate test endpoints
 - [ ] Deposit duplicate-race handling
 - [ ] Final `scripts/verify.sh` on Python 3.12 / Node 22 + open PR

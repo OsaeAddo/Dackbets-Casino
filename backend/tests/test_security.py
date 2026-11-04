@@ -5,8 +5,10 @@ from types import SimpleNamespace
 import httpx
 import pytest
 from app.auth import auth_service
+from app.config import settings
 from app.database import db
 from app.main import app
+from app.models import casino_models
 
 
 @pytest.fixture
@@ -75,3 +77,56 @@ async def test_check_verification_endpoint_is_gone(client):
     )
 
     assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_admin_api_fails_closed_when_unconfigured(client, monkeypatch):
+    monkeypatch.setattr(settings, "admin_api_key", None)
+
+    response = await client.get("/api/admin/stats")
+
+    assert response.status_code == 503
+
+
+@pytest.mark.asyncio
+async def test_admin_api_requires_the_configured_key(client, monkeypatch):
+    monkeypatch.setattr(settings, "admin_api_key", "admin-secret")
+
+    missing = await client.get("/api/admin/stats")
+    wrong = await client.get(
+        "/api/admin/stats",
+        headers={"X-Admin-Key": "not-the-secret"},
+    )
+    accepted = await client.get(
+        "/api/admin/stats",
+        headers={"X-Admin-Key": "admin-secret"},
+    )
+
+    assert missing.status_code == 403
+    assert wrong.status_code == 403
+    assert accepted.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_admin_balance_adjustment_requires_the_key(client, monkeypatch):
+    monkeypatch.setattr(settings, "admin_api_key", "admin-secret")
+    calls = []
+
+    async def fake_update(user_id, currency, amount):
+        calls.append((user_id, currency, amount))
+
+    monkeypatch.setattr(casino_models, "update_user_balance", fake_update)
+
+    denied = await client.post(
+        "/api/admin/users/user-1/balance",
+        json={"ETH": 1.0},
+    )
+    accepted = await client.post(
+        "/api/admin/users/user-1/balance",
+        json={"ETH": 1.0},
+        headers={"X-Admin-Key": "admin-secret"},
+    )
+
+    assert denied.status_code == 403
+    assert accepted.status_code == 200, accepted.text
+    assert calls == [("user-1", "ETH", 1.0)]

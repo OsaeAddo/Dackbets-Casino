@@ -80,6 +80,12 @@ class Settings(BaseSettings):
 
     # Security
     debug: bool = False
+    # Shared secret for /api/admin/*. Empty means the admin API is disabled.
+    admin_api_key: str | None = None
+    # HMAC secret for inbound webhooks. Empty means signed webhooks are refused.
+    webhook_hmac_secret: str | None = None
+    # Expose /api/webhooks/test/* only in local development.
+    enable_test_webhooks: bool = False
     require_kyc_for_withdrawal: bool = True
     withdrawal_daily_limit: float = 10000.0
 
