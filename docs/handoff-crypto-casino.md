@@ -19,9 +19,9 @@ sections 1–3 before touching anything. Section 6 is the immediate work order.
 | Branch | `sprint/06-security-phase-1` (Phase 1 security, PR pending) |
 | HEAD | see `git log --oneline -1` |
 | Sync | branched from `main` @ `290b3a0` (merge PR #7, live-schema adoption) |
-| Working tree | in progress — see Sprint 6 below |
+| Working tree | clean |
 | CI on `main` | success on `290b3a0` |
-| Open PRs | none yet for Sprint 6 |
+| Open PRs | **PR #8** (`sprint/06-security-phase-1`) — ready for review, awaiting human merge |
 | Dependabot | **1 open** (was 210) — moderate `minimatch@3.1.5` in 6 dev-only eslint nodes; fixed upstream in 11.0.1, no 3.x patch. Accepted, see §5.8 |
 | Migrations | **`supabase/migrations/20261103000000_init_casino_schema.sql`** — applied to project `kebogkndtbkwukdyavfz` (DackBets Casino) |
 | Migration history | `supabase_migrations.schema_migrations` has `20261103000000 / init_casino_schema` |
@@ -60,8 +60,8 @@ Goal: close the Phase 1 security gaps in §4b. One commit per item.
       select against `casino_house_stats` and returns 503 on failure instead of
       reporting `connected` from `auth.get_session()`. Tests: `test_health.py`.
 - [x] **Debug `console.log`s (§4d)** removed from the profile page.
-- [ ] Final `scripts/verify.sh` on Python 3.12 / Node 22 + open PR
-- [ ] Delete stale `origin/sprint/01-foundation`
+- [x] Final `scripts/verify.sh` on Python 3.12.13 / Node 22.23.4 — EXIT=0, 33 tests, 18/18 pages; **PR #8** opened
+- [x] Deleted stale `origin/sprint/01-foundation`
 
 ### Live schema adoption (2026-11-04)
 
