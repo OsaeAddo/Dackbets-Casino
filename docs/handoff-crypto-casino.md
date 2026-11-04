@@ -21,7 +21,7 @@ sections 1–3 before touching anything. Section 6 is the immediate work order.
 | Sync | branched from `main` @ `a33bce5` (merge PR #8, Phase 1 security) |
 | Working tree | clean after the Sprint 7 commits |
 | CI on `main` | success on `a33bce5` |
-| Open PRs | **PR pending** (`sprint/07-session-hardening`) |
+| Open PRs | **PR #9** (`sprint/07-session-hardening`) — ready for review, awaiting human merge |
 | Dependabot | **1 open** (was 210) — moderate `minimatch@3.1.5` in 6 dev-only eslint nodes; accepted, see §5.8 |
 | Migrations | baseline `20261103000000_init_casino_schema.sql` + **`20261104000000_session_hardening.sql`** (adds `casino_sessions`) |
 | Migration status | baseline applied to project `kebogkndtbkwukdyavfz`; **session migration validated locally only — apply before deploying Sprint 7** |
@@ -498,7 +498,7 @@ or build. **Review when `eslint@10` / `eslint-config-next` drop the 3.x pins.**
 
 ## 6. Next session: start here
 
-Sprint 7 (`sprint/07-session-hardening`) is **ready for review**. It replaces the
+Sprint 7 (`sprint/07-session-hardening`) is **ready for review in PR #9**. It replaces the
 `localStorage` tokens with HttpOnly access/refresh cookies, adds double-submit CSRF, and
 rotates opaque refresh tokens with reuse detection. A human merges the PR; do not merge it
 yourself.
