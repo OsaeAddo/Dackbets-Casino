@@ -43,7 +43,13 @@ Goal: close the Phase 1 security gaps in §4b. One commit per item.
       unset (fail closed) and 403 on a missing/wrong key. The two route paths were
       also corrected from `/api/adminstats` and `/api/adminusers/...` to
       `/api/admin/stats` and `/api/admin/users/...`.
-- [ ] Webhook HMAC + gate test endpoints
+- [x] **Webhook HMAC.** `/api/webhooks/tatum/deposit` verifies `x-payload-hash`
+      (Tatum, HMAC-SHA512) or `X-Webhook-Signature` (`sha256=<hex>`) over the raw
+      body before parsing, with constant-time comparison; 503 when
+      `WEBHOOK_HMAC_SECRET` is unset and 401 when the signature is missing/wrong.
+      `/api/webhooks/test/*` is 404 unless `ENABLE_TEST_WEBHOOKS=true`, and always
+      requires `X-Admin-Key`.
+- [ ] Deposit duplicate-race handling
 - [ ] Deposit duplicate-race handling
 - [ ] Final `scripts/verify.sh` on Python 3.12 / Node 22 + open PR
 
