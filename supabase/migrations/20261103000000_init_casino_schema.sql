@@ -147,6 +147,12 @@ create trigger casino_transactions_set_updated_at
 
 -- Atomically add `p_amount` to one currency bucket of a profile balance.
 -- Raises if the profile is missing or the result would go negative.
+--
+-- Pre-versioning databases defined this RPC as `returns void`; PostgreSQL cannot
+-- change a function's return type with `create or replace`, so drop it first
+-- (safe on a fresh database).
+drop function if exists public.update_user_balance(uuid, text, numeric);
+
 create or replace function public.update_user_balance(
     p_user_id uuid,
     p_currency text,
@@ -274,6 +280,12 @@ grant execute on function public.get_user_by_email(text)
 -- Admin/service-role view joining the auth record to the casino profile.
 -- Deliberately not granted to anon/authenticated: it exposes every user's
 -- email address. Application code uses `get_user_by_email` instead.
+--
+-- Pre-versioning databases had a different `user_profiles` view (plain
+-- auth.users select) whose `email` column was `varchar`; `create or replace
+-- view` cannot change column types, so drop the old definition first.
+drop view if exists public.user_profiles;
+
 create or replace view public.user_profiles
 with (security_invoker = false) as
 select
