@@ -8,11 +8,13 @@ from app.dependencies import get_current_user_dep
 from app.models import casino_models
 from app.schemas import (
     CasinoUser,
+    EmailVerificationResponse,
     SignupResponse,
     TokenResponse,
     UserResponse,
     UserSignIn,
     UserSignUp,
+    VerifyEmailRequest,
 )
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -113,51 +115,40 @@ async def signup(user_data: UserSignUp) -> SignupResponse:
         )
 
 
-@router.post("/verify-email")
-async def verify_email(token_data: dict):
-    """Verify email with token from email link"""
+@router.post("/verify-email", response_model=EmailVerificationResponse)
+async def verify_email(token_data: VerifyEmailRequest) -> EmailVerificationResponse:
+    """Exchange a Supabase email-confirmation token for an application JWT.
+
+    The token is validated by Supabase. There is deliberately no fallback that
+    mints a token from an email address: knowing an address must never be
+    enough to obtain that user's session.
+    """
     try:
-        token = token_data.get("token")
-        if not token:
-            raise HTTPException(status_code=400, detail="Token required")
+        response = db.verify_email_token(token_data.token, token_data.email)
+    except Exception as e:  # noqa: BLE001 - Verification failure must not leak token details
+        logger.warning("Email verification rejected: %s", type(e).__name__)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired verification token",
+        )
 
-        # Supabase handles token verification
-        # You might need to implement this based on your flow
-        # This is typically handled by the confirmation link
+    user = getattr(response, "user", None)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired verification token",
+        )
 
-        return {"success": True, "message": "Email verified"}
-    except HTTPException:
-        raise
-    except Exception as e:  # noqa: BLE001 - API boundary: convert unexpected failures into an HTTP error response
-        logger.error("Email verification error: %s", str(e))
-        raise HTTPException(status_code=400, detail="Verification failed")
-
-
-@router.post("/check-verification")
-async def check_verification(data: dict):
-    """Check if email is verified"""
-    try:
-        email = data.get("email")
-        if not email:
-            raise HTTPException(status_code=400, detail="Email required")
-
-        # Get user from Supabase
-        user = await db.get_user_by_email(email)
-
-        if user and user.email_confirmed_at:
-            # Email is verified, generate token
-            access_token = auth_service.create_access_token(data={"sub": user.id})
-            return {
-                "verified": True,
-                "access_token": access_token
-            }
-        else:
-            return {"verified": False}
-    except HTTPException:
-        raise
-    except Exception as e:  # noqa: BLE001 - API boundary: convert unexpected failures into an HTTP error response
-        logger.error("Check verification error: %s", str(e))
-        return {"verified": False}
+    session = getattr(response, "session", None)
+    access_token = auth_service.create_access_token(data={"sub": str(user.id)})
+    return EmailVerificationResponse(
+        success=True,
+        message="Email verified",
+        access_token=access_token,
+        token_type="bearer",
+        expires_in=settings.jwt_access_token_expire_minutes * 60,
+        supabase_token=getattr(session, "access_token", None),
+    )
 
 
 @router.post("/signin", response_model=TokenResponse)

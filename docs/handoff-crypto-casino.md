@@ -16,17 +16,32 @@ sections 1–3 before touching anything. Section 6 is the immediate work order.
 
 | Item | Value |
 | --- | --- |
-| Branch | `chore/sprint-05-adopt-live-schema` (post-merge adoption docs + baseline guards) |
+| Branch | `sprint/06-security-phase-1` (Phase 1 security, PR pending) |
 | HEAD | see `git log --oneline -1` |
-| Sync | branched from `main` @ `2f2c0ff` (merge PR #6, Supabase migrations) |
-| Working tree | clean |
-| CI on `main` | success on `2f2c0ff` (CI + Graph Update) |
-| Open PRs | adoption PR (this branch) — ready for review, awaiting human merge |
+| Sync | branched from `main` @ `290b3a0` (merge PR #7, live-schema adoption) |
+| Working tree | in progress — see Sprint 6 below |
+| CI on `main` | success on `290b3a0` |
+| Open PRs | none yet for Sprint 6 |
 | Dependabot | **1 open** (was 210) — moderate `minimatch@3.1.5` in 6 dev-only eslint nodes; fixed upstream in 11.0.1, no 3.x patch. Accepted, see §5.8 |
 | Migrations | **`supabase/migrations/20261103000000_init_casino_schema.sql`** — applied to project `kebogkndtbkwukdyavfz` (DackBets Casino) |
 | Migration history | `supabase_migrations.schema_migrations` has `20261103000000 / init_casino_schema` |
 | Stale remote branch | `origin/sprint/01-foundation` still exists (merged, never deleted) |
 | Secrets | `backend/.env` is gitignored (`git check-ignore` confirms); `frontend/.env.local` ignored; `supabase/.temp/` now ignored |
+
+### Sprint 6 progress (`sprint/06-security-phase-1`)
+
+Goal: close the Phase 1 security gaps in §4b. One commit per item.
+
+- [x] **`check-verification` bypass removed.** `POST /api/auth/check-verification`
+      is gone (404). `POST /api/auth/verify-email` now exchanges a real Supabase
+      confirmation token (`token_hash`, or `token` + `email` for OTP) via
+      `db.verify_email_token()`; invalid/expired/reused tokens return 400 and no JWT.
+      The verify-email page no longer auto-mints a token from an email address; it
+      links to sign-in instead. Tests: `backend/tests/test_security.py`.
+- [ ] Admin auth
+- [ ] Webhook HMAC + gate test endpoints
+- [ ] Deposit duplicate-race handling
+- [ ] Final `scripts/verify.sh` on Python 3.12 / Node 22 + open PR
 
 ### Live schema adoption (2026-11-04)
 
