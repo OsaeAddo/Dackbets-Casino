@@ -16,10 +16,6 @@ class SignupResponse(BaseModel):
     email: str
     requires_confirmation: bool = False
     message: str | None = None
-    access_token: str | None = None
-    token_type: str | None = None
-    expires_in: int | None = None
-    supabase_token: str | None = None
     username: str | None = None
     
     
@@ -43,10 +39,7 @@ class VerifyEmailRequest(BaseModel):
 class EmailVerificationResponse(BaseModel):
     success: bool
     message: str
-    access_token: str | None = None
-    token_type: str | None = None
     expires_in: int | None = None
-    supabase_token: str | None = None
 
 
 class TokenData(BaseModel):
@@ -54,13 +47,10 @@ class TokenData(BaseModel):
     
 # Response schemas
 class TokenResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
     expires_in: int
     user_id: str
     email: str
     username: str | None = None
-    supabase_token: str | None = None  # Supabase's JWT
     balance: dict[str, float] | None = None
 
 

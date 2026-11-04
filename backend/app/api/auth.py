@@ -3,6 +3,12 @@ from datetime import UTC, datetime
 
 from app.auth import auth_service
 from app.config import settings
+from app.cookies import (
+    REFRESH_COOKIE,
+    clear_auth_cookies,
+    csrf_is_valid,
+    set_auth_cookies,
+)
 from app.database import db
 from app.dependencies import get_current_user_dep
 from app.models import casino_models
@@ -16,14 +22,12 @@ from app.schemas import (
     UserSignUp,
     VerifyEmailRequest,
 )
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from app.session_service import RefreshRejected, session_service
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi.responses import JSONResponse
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 logger = logging.getLogger(__name__)
-
-# Security
-security = HTTPBearer()
 
 
 async def _ensure_user_profile(user_id: str, email: str, username: str | None = None) -> dict:
@@ -43,7 +47,7 @@ async def _ensure_user_profile(user_id: str, email: str, username: str | None = 
 
 # Authentication endpoints
 @router.post("/signup", response_model=SignupResponse, status_code=status.HTTP_201_CREATED)
-async def signup(user_data: UserSignUp) -> SignupResponse:
+async def signup(user_data: UserSignUp, http_response: Response) -> SignupResponse:
     """
     Register a new casino user.
 
@@ -77,9 +81,8 @@ async def signup(user_data: UserSignUp) -> SignupResponse:
                 ),
             )
 
-        access_token = auth_service.create_access_token(
-            data={"sub": user.id}
-        )
+        tokens = await session_service.create(user_id=str(user.id))
+        set_auth_cookies(http_response, tokens)
 
         return SignupResponse(
             user_id=user.id,
@@ -87,10 +90,7 @@ async def signup(user_data: UserSignUp) -> SignupResponse:
             username=username,
             requires_confirmation=False,
             message="Account created successfully.",
-            access_token=access_token,
-            token_type="bearer",
             expires_in=settings.jwt_access_token_expire_minutes * 60,
-            supabase_token=response.session.access_token,
         )
 
     except HTTPException:
@@ -116,7 +116,10 @@ async def signup(user_data: UserSignUp) -> SignupResponse:
 
 
 @router.post("/verify-email", response_model=EmailVerificationResponse)
-async def verify_email(token_data: VerifyEmailRequest) -> EmailVerificationResponse:
+async def verify_email(
+    token_data: VerifyEmailRequest,
+    http_response: Response,
+) -> EmailVerificationResponse:
     """Exchange a Supabase email-confirmation token for an application JWT.
 
     The token is validated by Supabase. There is deliberately no fallback that
@@ -140,22 +143,26 @@ async def verify_email(token_data: VerifyEmailRequest) -> EmailVerificationRespo
         )
 
     session = getattr(response, "session", None)
-    access_token = auth_service.create_access_token(data={"sub": str(user.id)})
+    if session is None:
+        # Without a Supabase session there is no verified login to hand out.
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired verification token",
+        )
+
+    tokens = await session_service.create(user_id=str(user.id))
+    set_auth_cookies(http_response, tokens)
+
     return EmailVerificationResponse(
         success=True,
         message="Email verified",
-        access_token=access_token,
-        token_type="bearer",
         expires_in=settings.jwt_access_token_expire_minutes * 60,
-        supabase_token=getattr(session, "access_token", None),
     )
 
 
 @router.post("/signin", response_model=TokenResponse)
-async def signin(user_data: UserSignIn):
-    """
-    Authenticate user and return tokens
-    """
+async def signin(user_data: UserSignIn, http_response: Response):
+    """Authenticate and start a cookie-backed session."""
     try:
         # Authenticate with Supabase
         auth_response = await auth_service.authenticate_user(
@@ -170,25 +177,17 @@ async def signin(user_data: UserSignIn):
             )
 
         user = auth_response["user"]
-        session = auth_response["session"]
 
-        # Get Supabase's JWT token from the session
-        supabase_token = session.access_token
-
-        # Create JWT token
-        access_token = auth_service.create_access_token(
-            data={"sub": user.id}
-        )
+        tokens = await session_service.create(user_id=str(user.id))
+        set_auth_cookies(http_response, tokens)
 
         profile = await casino_models.get_user_profile(user.id) or {}
 
         return TokenResponse(
-            access_token=access_token,
             expires_in=settings.jwt_access_token_expire_minutes * 60,
             user_id=user.id,
             email=user.email,
             username=profile.get("username"),
-            supabase_token=supabase_token,
             balance=profile.get("balance", {}) or {},
         )
 
@@ -201,13 +200,58 @@ async def signin(user_data: UserSignIn):
         )
 
 
+@router.post("/refresh")
+async def refresh_session(request: Request, http_response: Response):
+    """Rotate the refresh token and re-issue the access cookie.
+
+    The refresh token is only ever read from its HttpOnly cookie, and the
+    request must also carry the double-submit CSRF header.
+    """
+    if not csrf_is_valid(request):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="CSRF token missing or invalid",
+        )
+
+    refresh_token = request.cookies.get(REFRESH_COOKIE)
+    if not refresh_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No refresh session",
+        )
+
+    try:
+        tokens, user_id = await session_service.rotate(refresh_token)
+    except RefreshRejected:
+        # Includes replay of an already-rotated token: the family is revoked.
+        # The cookies must be cleared on the response we actually return, not on
+        # the injected one (an HTTPException would discard those headers).
+        rejection = JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"detail": "Session expired"},
+        )
+        clear_auth_cookies(rejection)
+        return rejection
+
+    set_auth_cookies(http_response, tokens)
+    return {
+        "ok": True,
+        "user_id": user_id,
+        "expires_in": settings.jwt_access_token_expire_minutes * 60,
+    }
+
+
 @router.post("/signout")
-async def signout(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    """
-    Sign out user (invalidate token on client side)
-    """
-    # Note: With JWT, we can't invalidate server-side without a blacklist
-    # This just tells client to remove token
+async def signout(request: Request, http_response: Response):
+    """Revoke the current session family and clear every auth cookie."""
+    refresh_token = request.cookies.get(REFRESH_COOKIE)
+    if refresh_token:
+        try:
+            await session_service.revoke(refresh_token)
+        except Exception as e:  # noqa: BLE001 - Sign-out must still clear cookies if the DB write fails
+            logger.warning("Failed to revoke refresh session: %s", type(e).__name__)
+
+    clear_auth_cookies(http_response)
     return {"message": "Signed out successfully"}
 
 

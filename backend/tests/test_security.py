@@ -56,7 +56,11 @@ async def test_verify_email_issues_token_only_after_supabase_accepts(client, mon
             session=SimpleNamespace(access_token="supabase-session-token"),
         )
 
+    async def fake_create_session(**kwargs):
+        return {"id": "session-1", **kwargs}
+
     monkeypatch.setattr(db, "verify_email_token", fake_verify)
+    monkeypatch.setattr(casino_models, "create_session", fake_create_session)
 
     response = await client.post(
         "/api/auth/verify-email",
@@ -66,8 +70,11 @@ async def test_verify_email_issues_token_only_after_supabase_accepts(client, mon
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["success"] is True
-    assert body["supabase_token"] == "supabase-session-token"
-    assert auth_service.verify_token(body["access_token"]).user_id == "user-9"
+    assert "access_token" not in body
+    assert "supabase_token" not in body
+    access_cookie = response.cookies.get("casino_access")
+    assert access_cookie
+    assert auth_service.verify_token(access_cookie).user_id == "user-9"
     assert calls == {"token": "valid-token-hash", "email": None}
 
 
