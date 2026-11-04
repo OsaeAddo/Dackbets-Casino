@@ -56,7 +56,12 @@ Goal: close the Phase 1 security gaps in §4b. One commit per item.
       `skipped / already_processed` and is never credited twice. A failed credit
       releases the claim for the provider's retry; once the credit lands, the
       claim is never released even if the status update fails.
+- [x] **Real DB health probe (§4c).** `/api/casino/health` now runs a `LIMIT 1`
+      select against `casino_house_stats` and returns 503 on failure instead of
+      reporting `connected` from `auth.get_session()`. Tests: `test_health.py`.
+- [x] **Debug `console.log`s (§4d)** removed from the profile page.
 - [ ] Final `scripts/verify.sh` on Python 3.12 / Node 22 + open PR
+- [ ] Delete stale `origin/sprint/01-foundation`
 
 ### Live schema adoption (2026-11-04)
 
@@ -256,10 +261,10 @@ The user explicitly reordered this: **Dependabot first**.
 
 1. ~~**Dependabot remediation**~~ — done, Sprint 4; 210 → 1 accepted dev-only alert (§5.8)
 2. ~~**Supabase migrations**~~ — done, Sprint 5 (§2); no longer implicit
-3. **Phase 1 security** — admin auth, webhook HMAC, webhook idempotency —
-   **immediate next**, and the `check-verification` auth bypass below comes first
-4. **Real DB health probe**
-5. **Small cleanups** — debug `console.log`s, stale remote branch
+3. ~~**Phase 1 security** — admin auth, webhook HMAC, webhook idempotency~~ —
+   done, Sprint 6. Session hardening (cookies/CSRF/refresh) remains deferred
+4. ~~**Real DB health probe**~~ — done, Sprint 6
+5. **Small cleanups** — debug `console.log`s done; stale remote branch pending
 
 ### 4a. Supabase migrations — delivered in Sprint 5
 `supabase/migrations/20261103000000_init_casino_schema.sql` covers the five tables,
@@ -272,7 +277,7 @@ Open follow-ups, if the product needs them later:
 - A migration runner in CI (the project is linked, but CI has no DB credentials;
   `scripts/validate-migration.sh` still validates against a throwaway Postgres)
 
-### 4b. Phase 1 security (live gaps, deferred from Sprints 1–2)
+### 4b. Phase 1 security — delivered in Sprint 6 (session hardening still deferred)
 - **`/api/auth/check-verification` is an auth bypass (NEW, found 2026-11-03)**:
   `backend/app/api/auth.py:136-160` looks up a user by email and, if the address is
   confirmed, returns an app JWT signed for that user id. Anyone who knows a verified
@@ -291,12 +296,12 @@ Open follow-ups, if the product needs them later:
 - Session hardening still deferred: tokens in `localStorage`
   (`frontend/lib/contexts/AuthContext.tsx`), no HttpOnly cookie / CSRF / refresh rotation
 
-### 4c. Real health probe
+### 4c. Real health probe — delivered in Sprint 6
 `backend/app/api/casino.py:15-29` calls `db.client.auth.get_session()` and reports
 `"connected"` whenever it doesn't throw — it never touches Postgres. Replace with a cheap
 `SELECT` and return 503 on failure.
 
-### 4d. Small cleanups
+### 4d. Small cleanups (console.logs done in Sprint 6)
 - `frontend/app/(main)/profile/page.tsx:135-136` — remove
   `console.log('Full user object:', …)` / `console.log('User ID:', …)`
 - `git push origin --delete sprint/01-foundation`
