@@ -57,10 +57,21 @@ The schema is versioned in [`supabase/migrations/`](supabase/migrations). Apply 
 the Supabase CLI, or by pasting the `.sql` file into the project's SQL editor.
 
 ```bash
-supabase init                    # once, if supabase/config.toml is missing
-supabase link --project-ref <ref>
-supabase db push
+supabase link --project-ref <ref>       # once; requires `supabase login`
+export SUPABASE_DB_PASSWORD='...'       # Dashboard → Settings → Database
+supabase db push --remote               # the local Docker stack is the default target
 ```
+
+`--remote` is required: without it the CLI targets the local stack at `127.0.0.1:54322`.
+Supplying the database password (`SUPABASE_DB_PASSWORD` or `-p`) also skips the CLI's
+temporary `cli_login_postgres` role, which some projects reject with
+`permission denied to alter role`.
+
+Projects that already have the tables (created by hand before migrations existed) need a
+one-time adoption. The project was adopted on 2026-11-04 with
+[`supabase/adoption/20261104_detach_legacy_schema.sql`](supabase/adoption/20261104_detach_legacy_schema.sql):
+move the old tables into `legacy_20261104`, push the baseline, copy the rows back, verify
+counts, then `drop schema legacy_20261104 cascade`.
 
 Objects used by the API:
 
