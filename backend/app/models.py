@@ -75,6 +75,14 @@ class CasinoModels:
             .update({"status": status, "updated_at": datetime.now(UTC).isoformat()}) \
             .filter("metadata->>tx_hash", "eq", tx_hash) \
             .execute()
+
+    async def delete_transaction_by_hash(self, tx_hash: str):
+        """Remove a pending transaction so a failed deposit can be retried."""
+        client = self.client
+        return client.table("casino_transactions") \
+            .delete() \
+            .filter("metadata->>tx_hash", "eq", tx_hash) \
+            .execute()
     
     # Wallets Table
     async def create_wallet(self, user_id: str, currency: str, address: str):

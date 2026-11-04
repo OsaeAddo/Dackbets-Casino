@@ -27,6 +27,28 @@ class UserSignIn(BaseModel):
     email: EmailStr
     password: str
 
+
+class VerifyEmailRequest(BaseModel):
+    """Supabase email-confirmation token.
+
+    Magic-link emails carry a ``token_hash``; OTP emails carry a numeric
+    ``token`` plus the address it was sent to. Either form is accepted, but
+    the token must be validated by Supabase before a session is issued.
+    """
+
+    token: str = Field(..., min_length=1, max_length=512)
+    email: EmailStr | None = None
+
+
+class EmailVerificationResponse(BaseModel):
+    success: bool
+    message: str
+    access_token: str | None = None
+    token_type: str | None = None
+    expires_in: int | None = None
+    supabase_token: str | None = None
+
+
 class TokenData(BaseModel):
     user_id: str | None = None
     

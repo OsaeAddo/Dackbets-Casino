@@ -58,6 +58,21 @@ class SupabaseDB:
         Get user using Supabase's JWT token
         """
         return self.client.auth.get_user(supabase_token)
+
+    def verify_email_token(self, token: str, email: str | None = None):
+        """Exchange a Supabase email-confirmation token for a session.
+
+        Supabase signs both ends of this call: an invalid, expired, or reused
+        token raises instead of returning a user, which is what stops the old
+        email-lookup token minting.
+        """
+        if email:
+            return self.client.auth.verify_otp(
+                {"email": email, "token": token, "type": "email"}
+            )
+        return self.client.auth.verify_otp(
+            {"token_hash": token, "type": "email"}
+        )
     
     def get_user_by_id(self, user_id: str):
         """

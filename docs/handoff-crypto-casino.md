@@ -16,17 +16,52 @@ sections 1–3 before touching anything. Section 6 is the immediate work order.
 
 | Item | Value |
 | --- | --- |
-| Branch | `chore/sprint-05-adopt-live-schema` (post-merge adoption docs + baseline guards) |
+| Branch | `sprint/06-security-phase-1` (Phase 1 security, PR pending) |
 | HEAD | see `git log --oneline -1` |
-| Sync | branched from `main` @ `2f2c0ff` (merge PR #6, Supabase migrations) |
+| Sync | branched from `main` @ `290b3a0` (merge PR #7, live-schema adoption) |
 | Working tree | clean |
-| CI on `main` | success on `2f2c0ff` (CI + Graph Update) |
-| Open PRs | adoption PR (this branch) — ready for review, awaiting human merge |
+| CI on `main` | success on `290b3a0` |
+| Open PRs | **PR #8** (`sprint/06-security-phase-1`) — ready for review, awaiting human merge |
 | Dependabot | **1 open** (was 210) — moderate `minimatch@3.1.5` in 6 dev-only eslint nodes; fixed upstream in 11.0.1, no 3.x patch. Accepted, see §5.8 |
 | Migrations | **`supabase/migrations/20261103000000_init_casino_schema.sql`** — applied to project `kebogkndtbkwukdyavfz` (DackBets Casino) |
 | Migration history | `supabase_migrations.schema_migrations` has `20261103000000 / init_casino_schema` |
 | Stale remote branch | `origin/sprint/01-foundation` still exists (merged, never deleted) |
 | Secrets | `backend/.env` is gitignored (`git check-ignore` confirms); `frontend/.env.local` ignored; `supabase/.temp/` now ignored |
+
+### Sprint 6 progress (`sprint/06-security-phase-1`)
+
+Goal: close the Phase 1 security gaps in §4b. One commit per item.
+
+- [x] **`check-verification` bypass removed.** `POST /api/auth/check-verification`
+      is gone (404). `POST /api/auth/verify-email` now exchanges a real Supabase
+      confirmation token (`token_hash`, or `token` + `email` for OTP) via
+      `db.verify_email_token()`; invalid/expired/reused tokens return 400 and no JWT.
+      The verify-email page no longer auto-mints a token from an email address; it
+      links to sign-in instead. Tests: `backend/tests/test_security.py`.
+- [x] **Admin auth.** `/api/admin/*` now requires `X-Admin-Key`, compared in
+      constant time against `ADMIN_API_KEY`; the API returns 503 when the key is
+      unset (fail closed) and 403 on a missing/wrong key. The two route paths were
+      also corrected from `/api/adminstats` and `/api/adminusers/...` to
+      `/api/admin/stats` and `/api/admin/users/...`.
+- [x] **Webhook HMAC.** `/api/webhooks/tatum/deposit` verifies `x-payload-hash`
+      (Tatum, HMAC-SHA512) or `X-Webhook-Signature` (`sha256=<hex>`) over the raw
+      body before parsing, with constant-time comparison; 503 when
+      `WEBHOOK_HMAC_SECRET` is unset and 401 when the signature is missing/wrong.
+      `/api/webhooks/test/*` is 404 unless `ENABLE_TEST_WEBHOOKS=true`, and always
+      requires `X-Admin-Key`.
+- [ ] Deposit duplicate-race handling
+- [x] **Deposit duplicate-race handling.** `WebhookProcessor.process_deposit`
+      now writes the transaction as `pending` *before* crediting the balance, so
+      the unique `metadata->>'tx_hash'` index decides the race; the loser gets
+      `skipped / already_processed` and is never credited twice. A failed credit
+      releases the claim for the provider's retry; once the credit lands, the
+      claim is never released even if the status update fails.
+- [x] **Real DB health probe (§4c).** `/api/casino/health` now runs a `LIMIT 1`
+      select against `casino_house_stats` and returns 503 on failure instead of
+      reporting `connected` from `auth.get_session()`. Tests: `test_health.py`.
+- [x] **Debug `console.log`s (§4d)** removed from the profile page.
+- [x] Final `scripts/verify.sh` on Python 3.12.13 / Node 22.23.4 — EXIT=0, 33 tests, 18/18 pages; **PR #8** opened
+- [x] Deleted stale `origin/sprint/01-foundation`
 
 ### Live schema adoption (2026-11-04)
 
@@ -226,10 +261,10 @@ The user explicitly reordered this: **Dependabot first**.
 
 1. ~~**Dependabot remediation**~~ — done, Sprint 4; 210 → 1 accepted dev-only alert (§5.8)
 2. ~~**Supabase migrations**~~ — done, Sprint 5 (§2); no longer implicit
-3. **Phase 1 security** — admin auth, webhook HMAC, webhook idempotency —
-   **immediate next**, and the `check-verification` auth bypass below comes first
-4. **Real DB health probe**
-5. **Small cleanups** — debug `console.log`s, stale remote branch
+3. ~~**Phase 1 security** — admin auth, webhook HMAC, webhook idempotency~~ —
+   done, Sprint 6. Session hardening (cookies/CSRF/refresh) remains deferred
+4. ~~**Real DB health probe**~~ — done, Sprint 6
+5. **Small cleanups** — debug `console.log`s done; stale remote branch pending
 
 ### 4a. Supabase migrations — delivered in Sprint 5
 `supabase/migrations/20261103000000_init_casino_schema.sql` covers the five tables,
@@ -242,7 +277,7 @@ Open follow-ups, if the product needs them later:
 - A migration runner in CI (the project is linked, but CI has no DB credentials;
   `scripts/validate-migration.sh` still validates against a throwaway Postgres)
 
-### 4b. Phase 1 security (live gaps, deferred from Sprints 1–2)
+### 4b. Phase 1 security — delivered in Sprint 6 (session hardening still deferred)
 - **`/api/auth/check-verification` is an auth bypass (NEW, found 2026-11-03)**:
   `backend/app/api/auth.py:136-160` looks up a user by email and, if the address is
   confirmed, returns an app JWT signed for that user id. Anyone who knows a verified
@@ -261,12 +296,12 @@ Open follow-ups, if the product needs them later:
 - Session hardening still deferred: tokens in `localStorage`
   (`frontend/lib/contexts/AuthContext.tsx`), no HttpOnly cookie / CSRF / refresh rotation
 
-### 4c. Real health probe
+### 4c. Real health probe — delivered in Sprint 6
 `backend/app/api/casino.py:15-29` calls `db.client.auth.get_session()` and reports
 `"connected"` whenever it doesn't throw — it never touches Postgres. Replace with a cheap
 `SELECT` and return 503 on failure.
 
-### 4d. Small cleanups
+### 4d. Small cleanups (console.logs done in Sprint 6)
 - `frontend/app/(main)/profile/page.tsx:135-136` — remove
   `console.log('Full user object:', …)` / `console.log('User ID:', …)`
 - `git push origin --delete sprint/01-foundation`
@@ -436,24 +471,25 @@ cd <repo root>
 git switch main && git pull --ff-only
 git status -sb                    # expect clean; if dirty, stop and ask
 
-git switch -c sprint/06-security
+git switch -c sprint/07-session-hardening
 ```
 
-**Resume protocol (unchanged):** `git switch main && git pull --ff-only`; if Sprint 5 work is
-already in progress, `git switch sprint/05-supabase-migrations` and read the §1 progress
-checklist instead. Recreate the toolchain from §1 (Python 3.12 venv, Node 22) before running
+**Resume protocol (unchanged):** `git switch main && git pull --ff-only`; if a sprint is
+already in progress, `git switch <branch>` and read the §1 progress checklist instead.
+Recreate the toolchain from §1 (Python 3.12 venv, Node 22) before running
 `scripts/verify.sh`, and run `./scripts/validate-migration.sh` after touching SQL.
 
-**Current next step:** Sprint 5 is **merged and applied to the live project**. The
-adoption follow-up PR is open for review; a human merges it — do not merge it yourself.
+**Current next step:** Sprint 6 (`sprint/06-security-phase-1`) is **ready for review**.
+It removes the `check-verification` token bypass, adds admin-key auth, signs inbound
+webhooks and hides the test endpoints, settles deposit races via the unique index, and
+replaces the fake health probe. A human merges the PR; do not merge it yourself.
 
-After the adoption PR is merged:
+After the Sprint 6 PR is merged:
 1. Confirm CI on `main` is green.
-2. Start Sprint 6 from §4b: **Phase 1 security**. Fix the
-   `/api/auth/check-verification` token bypass first, then admin auth, webhook HMAC, and
-   duplicate-race handling.
-3. Optionally clear §4d small cleanups (debug `console.log`s in
-   `frontend/app/(main)/profile/page.tsx`, delete stale `origin/sprint/01-foundation`).
+2. Start Sprint 7: **session hardening** (§4b last bullet) — move tokens out of
+   `localStorage` into HttpOnly cookies with CSRF protection and refresh rotation.
+3. Optional follow-ups: real chain address generator (§4a), real `/api/casino/state`
+   stats (§4d), and a CI migration runner (§4a).
 
 Do **not** re-apply the baseline migration: `supabase_migrations.schema_migrations`
 already records `20261103000000`, and the live tables hold the original demo data.

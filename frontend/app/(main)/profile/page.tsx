@@ -135,9 +135,6 @@ export default function ProfilePage() {
     });
   };
 
-  console.log('Full user object:', user);
-  console.log('User ID:', user?.id);
-
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">

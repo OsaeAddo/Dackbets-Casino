@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { MailIcon, ExternalLinkIcon, RefreshCwIcon, CheckCircleIcon } from 'lucide-react';
+import { MailIcon, ExternalLinkIcon, CheckCircleIcon } from 'lucide-react';
 import { apiClient } from '@/lib/api/client';
 import { toast } from 'sonner';
 
@@ -13,12 +13,10 @@ function VerifyEmailContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [email, setEmail] = useState<string>('');
-    const [checking, setChecking] = useState(false);
     const [verified, setVerified] = useState(false);
 
     const verifyEmail = useCallback(async (token: string) => {
         try {
-            setChecking(true);
             // This endpoint will handle email confirmation
             const response = await apiClient.post('/auth/verify-email', { token });
 
@@ -28,6 +26,9 @@ function VerifyEmailContent() {
 
                 // Auto-login after verification
                 localStorage.setItem('access_token', response.data.access_token);
+                if (response.data.supabase_token) {
+                    localStorage.setItem('supabase_token', response.data.supabase_token);
+                }
 
                 toast.success('Email verified! Redirecting to dashboard...');
                 setTimeout(() => {
@@ -36,8 +37,6 @@ function VerifyEmailContent() {
             }
         } catch {
             toast.error('Verification failed. Please try again.');
-        } finally {
-            setChecking(false);
         }
     }, [router]);
 
@@ -60,34 +59,6 @@ function VerifyEmailContent() {
 
     const openMailpit = () => {
         window.open('http://localhost:54324', '_blank');
-    };
-
-    const checkVerification = async () => {
-        try {
-            setChecking(true);
-            // Check if email is verified
-            const response = await apiClient.post('/auth/check-verification', { email });
-
-            if (response.data.verified) {
-                setVerified(true);
-                localStorage.removeItem('pending_email');
-
-                if (response.data.access_token) {
-                    localStorage.setItem('access_token', response.data.access_token);
-                }
-
-                toast.success('Email verified! Redirecting...');
-                setTimeout(() => {
-                    router.push('/dashboard');
-                }, 2000);
-            } else {
-                toast.info('Email not verified yet. Check your inbox.');
-            }
-        } catch {
-            toast.error('Failed to check verification status');
-        } finally {
-            setChecking(false);
-        }
     };
 
     if (verified) {
@@ -143,20 +114,11 @@ function VerifyEmailContent() {
                         <Button
                             variant="link"
                             className="text-purple-400"
-                            onClick={checkVerification}
-                            disabled={checking}
+                            asChild
                         >
-                            {checking ? (
-                                <>
-                                    <RefreshCwIcon className="h-3 w-3 mr-1 animate-spin" />
-                                    Checking...
-                                </>
-                            ) : (
-                                <>
-                                    <RefreshCwIcon className="h-3 w-3 mr-1" />
-                                    I&apos;ve verified my email
-                                </>
-                            )}
+                            <Link href="/login">
+                                I&apos;ve verified my email — sign in
+                            </Link>
                         </Button>
                     </div>
 

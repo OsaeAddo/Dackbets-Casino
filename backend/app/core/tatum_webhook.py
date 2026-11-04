@@ -12,6 +12,16 @@ class WebhookProvider(Enum):
     MOCK = "mock"
     TATUM = "tatum"
 
+
+def _is_duplicate_transaction_error(exc: Exception) -> bool:
+    """True when the deposit unique index rejected the insert.
+
+    Two concurrent webhooks can both pass the pre-check. The database is the
+    real guard, so the loser of that race must be reported as already
+    processed, not as a failure.
+    """
+    return getattr(exc, "code", None) == "23505" or "23505" in str(exc)
+
 class DepositEvent:
     """Standardized deposit event structure"""
     def __init__(self, 
@@ -67,42 +77,72 @@ class WebhookProcessor:
                 "required": required_confirmations
             }
         
-        # Step 4: Credit user balance
+        # Step 4: Claim the transaction before crediting the balance.
+        # The unique partial index on metadata->>'tx_hash' is the arbiter: a
+        # concurrent duplicate loses here and is reported as skipped instead of
+        # double-crediting the user.
+        transaction_metadata = {
+            "tx_hash": event.tx_hash,
+            "address": event.address,
+            "confirmations": event.confirmations,
+            "provider": event.provider,
+            "processed_at": datetime.now(UTC).isoformat()
+        }
+        try:
+            await casino_models.create_transaction(
+                user_id=wallet["user_id"],
+                transaction_type="deposit",
+                currency=event.currency,
+                amount=event.amount,
+                status="pending",
+                metadata=transaction_metadata
+            )
+        except Exception as e:  # noqa: BLE001 - Webhook boundary: report failures in the response body
+            if _is_duplicate_transaction_error(e):
+                logger.info(f"Transaction {event.tx_hash} was already claimed")
+                return {"status": "skipped", "reason": "already_processed"}
+            logger.error(f"Failed to record deposit {event.tx_hash}: {e!s}")
+            return {"status": "failed", "reason": str(e)}
+
+        # Step 5: Credit user balance, then mark the claim confirmed.
         try:
             await casino_models.update_user_balance(
                 user_id=wallet["user_id"],
                 currency=event.currency,
                 amount=event.amount
             )
-            
-            # Step 5: Record successful transaction
-            await casino_models.create_transaction(
-                user_id=wallet["user_id"],
-                transaction_type="deposit",
-                currency=event.currency,
-                amount=event.amount,
-                status="confirmed",
-                metadata={
-                    "tx_hash": event.tx_hash,
-                    "address": event.address,
-                    "confirmations": event.confirmations,
-                    "provider": event.provider,
-                    "processed_at": datetime.now(UTC).isoformat()
-                }
-            )
-            
-            logger.info(f"✅ Credited {event.amount} {event.currency} to user {wallet['user_id']}")
-            return {
-                "status": "confirmed",
-                "user_id": wallet["user_id"],
-                "amount": event.amount,
-                "currency": event.currency,
-                "tx_hash": event.tx_hash
-            }
-            
         except Exception as e:  # noqa: BLE001 - Webhook boundary: report failures in the response body
             logger.error(f"Failed to credit deposit {event.tx_hash}: {e!s}")
+            # The balance was not credited, so release the claim and let the
+            # provider's retry be processed.
+            try:
+                await casino_models.delete_transaction_by_hash(event.tx_hash)
+            except Exception:
+                logger.exception(
+                    f"Could not release pending transaction {event.tx_hash}"
+                )
             return {"status": "failed", "reason": str(e)}
+
+        # The balance is credited at this point. Never delete the claim now, or
+        # a retry could credit the same deposit twice.
+        try:
+            await casino_models.update_transaction_status(
+                event.tx_hash,
+                "confirmed"
+            )
+        except Exception:
+            logger.exception(
+                f"Deposit {event.tx_hash} credited but its record stays pending"
+            )
+
+        logger.info(f"✅ Credited {event.amount} {event.currency} to user {wallet['user_id']}")
+        return {
+            "status": "confirmed",
+            "user_id": wallet["user_id"],
+            "amount": event.amount,
+            "currency": event.currency,
+            "tx_hash": event.tx_hash
+        }
     
     async def _find_wallet_by_address(self, currency: str, address: str) -> dict | None:
         """Find wallet by currency and address"""
