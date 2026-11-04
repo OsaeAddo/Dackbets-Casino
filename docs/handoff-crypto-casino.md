@@ -50,7 +50,12 @@ Goal: close the Phase 1 security gaps in §4b. One commit per item.
       `/api/webhooks/test/*` is 404 unless `ENABLE_TEST_WEBHOOKS=true`, and always
       requires `X-Admin-Key`.
 - [ ] Deposit duplicate-race handling
-- [ ] Deposit duplicate-race handling
+- [x] **Deposit duplicate-race handling.** `WebhookProcessor.process_deposit`
+      now writes the transaction as `pending` *before* crediting the balance, so
+      the unique `metadata->>'tx_hash'` index decides the race; the loser gets
+      `skipped / already_processed` and is never credited twice. A failed credit
+      releases the claim for the provider's retry; once the credit lands, the
+      claim is never released even if the status update fails.
 - [ ] Final `scripts/verify.sh` on Python 3.12 / Node 22 + open PR
 
 ### Live schema adoption (2026-11-04)
