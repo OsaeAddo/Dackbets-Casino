@@ -139,8 +139,8 @@ request (Python 3.12 and Node 22); see `.github/workflows/ci.yml`.
 - No real deposits or withdrawals are processed.
 - Crypto provider integration is testnet/mock only.
 - Withdrawals are disabled or stubbed.
-- Session hardening (HttpOnly cookies, CSRF, refresh rotation) is planned for a
-  later sprint; the current frontend stores tokens in `localStorage`.
+- Sessions use HttpOnly access/refresh cookies with double-submit CSRF and rotating
+  refresh tokens; the frontend keeps no auth tokens in `localStorage`.
 
 ## Sprint workflow
 
