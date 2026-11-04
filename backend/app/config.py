@@ -13,6 +13,16 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 1440  # 24 hours for casino
 
+    # Sessions
+    # Opaque refresh tokens live in HttpOnly cookies and rotate on every use.
+    refresh_token_expire_days: int = 30
+    # Cookies are Secure by default; local development over plain HTTP must set
+    # COOKIE_SECURE=false. Use COOKIE_SAMESITE=none (with Secure) when the API
+    # and the UI are served from different sites.
+    cookie_secure: bool = True
+    cookie_samesite: str = "lax"
+    cookie_domain: str | None = None
+
     # CORS
     frontend_url: str = "http://localhost:3000"
     # Optional comma-separated allowlist, e.g. "https://app.example.com,https://staging.example.com"
