@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 
 from app.database import db
 from app.schemas import CasinoStateResponse, HealthResponse
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, status
 
 router = APIRouter(prefix="/casino", tags=["Casino"])
 logger = logging.getLogger(__name__)
@@ -13,18 +13,28 @@ logger = logging.getLogger(__name__)
 
 @router.get("/health", response_model=HealthResponse)
 async def casino_health():
-    """Check casino health"""
+    """Check casino health with a cheap Postgres read.
+
+    The old probe called `auth.get_session()`, which never touched the
+    database. A failing SELECT now returns 503 so the platform can act on it.
+    """
     try:
-        db.client.auth.get_session()
-        db_status = "connected"
-    except Exception as e:  # noqa: BLE001 - API boundary: convert unexpected failures into an HTTP error response
-        db_status = f"error: {e!s}"
-    
+        db.casino_client.table("casino_house_stats") \
+            .select("game_type") \
+            .limit(1) \
+            .execute()
+    except Exception as e:  # noqa: BLE001 - Health boundary: convert every failure into 503
+        logger.error("Database health check failed: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database unavailable",
+        )
+
     return HealthResponse(
         status="healthy",
         service="crypto-casino",
         timestamp=datetime.now(UTC).isoformat(),
-        database=db_status,
+        database="connected",
         casino_open=True
     )
 
