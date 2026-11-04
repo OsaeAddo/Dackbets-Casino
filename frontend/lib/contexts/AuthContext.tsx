@@ -40,21 +40,19 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<AuthResult>;
   register: (email: string, password: string, username?: string) => Promise<AuthResult>;
-  logout: () => void;
+  logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Cookie helpers
-const setCookie = (name: string, value: string, days: number = 7) => {
-  const expires = new Date(Date.now() + days * 864e5).toUTCString();
-  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
-};
+// Non-secret marker set alongside the HttpOnly auth cookies. Its presence means
+// a refresh session may exist, so it is worth asking /auth/me.
+const SESSION_COOKIE = 'casino_session';
 
-const clearCookie = (name: string) => {
-  document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
-};
+function hasSessionMarker(): boolean {
+  return document.cookie.split('; ').some((cookie) => cookie.startsWith(`${SESSION_COOKIE}=`));
+}
 
 /**
  * Map the backend's snake_case /auth/me payload to the app's single User shape.
@@ -97,22 +95,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   const checkAuth = useCallback(async () => {
+    if (!hasSessionMarker()) {
+      setLoading(false);
+      return;
+    }
+
     try {
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        return;
-      }
-
-      // Ensure cookie exists (in case it was cleared)
-      setCookie('access_token', token, 7);
-
       setUser(await fetchCurrentUser());
     } catch (error: unknown) {
-      // Only clear everything if the token is invalid.
+      // A 401 here means the refresh cookie is gone or was revoked; the API
+      // client has already attempted one rotation. Do not clear anything else.
       if (axios.isAxiosError(error) && error.response?.status === 401) {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('supabase_token');
-        clearCookie('access_token');
         setUser(null);
       }
     } finally {
@@ -128,41 +121,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     void run();
   }, [checkAuth]);
 
-  // Listen for storage events (for multi-tab sync)
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'access_token') {
-        if (!e.newValue) {
-          // Token was removed in another tab
-          setUser(null);
-          clearCookie('access_token');
-        }
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
-
   const login = async (email: string, password: string): Promise<AuthResult> => {
     try {
-      const response = await apiClient.post('/auth/signin', { email, password });
-      const data = response.data as {
-        access_token?: string;
-        supabase_token?: string;
-      };
-
-      if (!data.access_token) {
-        throw new Error('Login response did not include an access token');
-      }
-
-      localStorage.setItem('access_token', data.access_token);
-      if (data.supabase_token) {
-        localStorage.setItem('supabase_token', data.supabase_token);
-      }
-
-      // Set the cookie for proxy.ts
-      setCookie('access_token', data.access_token, 7);
+      // The backend sets HttpOnly access/refresh cookies plus the CSRF cookie.
+      await apiClient.post('/auth/signin', { email, password });
 
       setUser(await fetchCurrentUser());
 
@@ -188,16 +150,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         username,
       });
       const data = response.data as {
-        access_token?: string;
-        supabase_token?: string;
         requires_confirmation?: boolean;
         message?: string;
       };
 
       // Email confirmation required (or no session returned): do not assume
-      // tokens exist and do not log the user in.
-      if (data.requires_confirmation || !data.access_token) {
-        localStorage.setItem('pending_email', email);
+      // the user is logged in.
+      if (data.requires_confirmation) {
+        // Only a non-secret convenience value; it is removed after verification.
+        sessionStorage.setItem('pending_email', email);
 
         toast.success(
           data.message || 'Please check your email to confirm your account',
@@ -212,14 +173,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
       }
 
-      // Email already confirmed (auto-confirm in dev)
-      localStorage.setItem('access_token', data.access_token);
-      if (data.supabase_token) {
-        localStorage.setItem('supabase_token', data.supabase_token);
-      }
-
-      setCookie('access_token', data.access_token, 7);
-
+      // Email already confirmed (auto-confirm in dev): the response already set
+      // the auth cookies.
       setUser(await fetchCurrentUser());
       toast.success('Account created successfully!');
       router.push('/dashboard');
@@ -232,10 +187,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('supabase_token');
-    clearCookie('access_token');
+  const logout = async () => {
+    try {
+      // Revokes the refresh session server-side and expires every auth cookie.
+      await apiClient.post('/auth/signout');
+    } catch {
+      // Logging out locally must not depend on the network.
+    }
     setUser(null);
 
     router.push('/');

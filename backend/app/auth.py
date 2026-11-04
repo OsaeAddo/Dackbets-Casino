@@ -69,36 +69,16 @@ class AuthService:
             )
 
     @staticmethod
-    async def _resolve_auth_user(
-        custom_jwt_token: str | None = None,
-        supabase_token: str | None = None,
-    ):
-        """Resolve a Supabase auth user from either token type.
-
-        Both token paths are normalized here so callers never have to know
-        whether the underlying SDK returned a ``User`` or a ``UserResponse``.
-        """
-        if supabase_token:
-            try:
-                logger.debug("Trying with Supabase token...")
-                response = db.get_user_with_supabase_token(supabase_token)
-                user = getattr(response, "user", None)
-                if user:
-                    logger.debug("User found via Supabase token: %s", user.id)
-                    return user
-            except Exception as e:  # noqa: BLE001 - Authentication fallback: try the next credential source
-                logger.warning("Supabase token failed: %s", str(e))
-
-        if custom_jwt_token:
-            try:
-                logger.debug("Falling back to custom JWT...")
-                token_data = AuthService.verify_token(custom_jwt_token)
-                user = db.get_user_by_id(token_data.user_id)
-                if user:
-                    logger.debug("User found via admin API: %s", user.id)
-                    return user
-            except Exception as e:  # noqa: BLE001 - Authentication fallback: try the next credential source
-                logger.warning("Custom JWT authentication failed: %s", str(e))
+    async def _resolve_auth_user(custom_jwt_token: str):
+        """Resolve the Supabase auth user behind an application JWT."""
+        try:
+            token_data = AuthService.verify_token(custom_jwt_token)
+            user = db.get_user_by_id(token_data.user_id)
+            if user:
+                logger.debug("User found via admin API: %s", user.id)
+                return user
+        except Exception as e:  # noqa: BLE001 - Authentication boundary: normalizes every failure to 401
+            logger.warning("Custom JWT authentication failed: %s", str(e))
 
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -107,20 +87,10 @@ class AuthService:
         )
 
     @staticmethod
-    async def get_current_user(
-        custom_jwt_token: str | None = None,
-        supabase_token: str | None = None
-    ) -> CasinoUser:
-        """
-        Get the current user using either:
-        1. Supabase token (preferred, more reliable)
-        2. Custom JWT token (fallback)
-
-        Always returns one normalized CasinoUser with a casino profile dict.
-        """
+    async def get_current_user(custom_jwt_token: str) -> CasinoUser:
+        """Get the current user from an application JWT and load their profile."""
         auth_user = await AuthService._resolve_auth_user(
             custom_jwt_token=custom_jwt_token,
-            supabase_token=supabase_token,
         )
         user_id = str(auth_user.id)
         email = getattr(auth_user, "email", "") or ""

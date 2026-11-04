@@ -12,23 +12,58 @@ sections 1–3 before touching anything. Section 6 is the immediate work order.
 
 ---
 
-## 1. Current state (verified 2026-11-04, Sprint 5 merged and schema applied)
+## 1. Current state (verified 2026-11-04, Sprint 7 in review)
 
 | Item | Value |
 | --- | --- |
-| Branch | `sprint/06-security-phase-1` (Phase 1 security, PR pending) |
+| Branch | `sprint/07-session-hardening` (session hardening, PR pending) |
 | HEAD | see `git log --oneline -1` |
-| Sync | branched from `main` @ `290b3a0` (merge PR #7, live-schema adoption) |
-| Working tree | clean |
-| CI on `main` | success on `290b3a0` |
-| Open PRs | **PR #8** (`sprint/06-security-phase-1`) — ready for review, awaiting human merge |
-| Dependabot | **1 open** (was 210) — moderate `minimatch@3.1.5` in 6 dev-only eslint nodes; fixed upstream in 11.0.1, no 3.x patch. Accepted, see §5.8 |
-| Migrations | **`supabase/migrations/20261103000000_init_casino_schema.sql`** — applied to project `kebogkndtbkwukdyavfz` (DackBets Casino) |
-| Migration history | `supabase_migrations.schema_migrations` has `20261103000000 / init_casino_schema` |
-| Stale remote branch | `origin/sprint/01-foundation` still exists (merged, never deleted) |
-| Secrets | `backend/.env` is gitignored (`git check-ignore` confirms); `frontend/.env.local` ignored; `supabase/.temp/` now ignored |
+| Sync | branched from `main` @ `a33bce5` (merge PR #8, Phase 1 security) |
+| Working tree | clean after the Sprint 7 commits |
+| CI on `main` | success on `a33bce5` |
+| Open PRs | **PR #9** (`sprint/07-session-hardening`) — ready for review, awaiting human merge |
+| Dependabot | **1 open** (was 210) — moderate `minimatch@3.1.5` in 6 dev-only eslint nodes; accepted, see §5.8 |
+| Migrations | baseline `20261103000000_init_casino_schema.sql` + **`20261104000000_session_hardening.sql`** (adds `casino_sessions`) |
+| Migration status | baseline applied to project `kebogkndtbkwukdyavfz`; **session migration validated locally only — apply before deploying Sprint 7** |
+| Stale remote branch | `origin/sprint/01-foundation` was deleted in Sprint 6 |
+| Secrets | `backend/.env` is gitignored; `frontend/.env.local` ignored; `supabase/.temp/` ignored |
 
-### Sprint 6 progress (`sprint/06-security-phase-1`)
+### Sprint 7 progress (`sprint/07-session-hardening`)
+
+Goal: close the deferred Phase 1 item — tokens out of `localStorage`, HttpOnly
+cookies, CSRF protection and refresh rotation.
+
+- [x] **`casino_sessions` migration.** SHA-256 refresh hashes only, rotation
+      `family_id`, expiry/unique/check constraints, RLS enabled with no
+      anon/authenticated policies, service-role-only grants. Validated with
+      `scripts/validate-migration.sh` on Postgres 18.3 (duplicate hash, bad hash
+      length and inverted expiry guards all fired; anon denied).
+- [x] **Opaque refresh tokens with rotation and reuse detection.**
+      `POST /api/auth/refresh` atomically claims the old row
+      (`revoked_at is null`) before creating the replacement; replaying an
+      already-revoked token revokes the whole family. A lost concurrent-claim
+      race is benign and does not revoke the winner's token.
+- [x] **HttpOnly cookie transport.** `casino_access` (JWT, HttpOnly),
+      `casino_refresh` (opaque, HttpOnly, path `/api/auth`), `casino_csrf`
+      (readable double-submit), `casino_session` (non-secret marker for the Next
+      middleware). Sign-in, sign-up auto-confirm, verify-email, refresh and
+      sign-out all set/clear them.
+- [x] **CSRF.** Cookie-authenticated `POST/PUT/PATCH/DELETE` requests must echo
+      `casino_csrf` in `X-CSRF-Token` (constant-time compare). Bearer clients
+      are exempt because browsers do not attach the token automatically.
+- [x] **No tokens in JSON.** `TokenResponse`, `SignupResponse` and
+      `EmailVerificationResponse` no longer return access/Supabase tokens, so an
+      XSS cannot read the session out of a response body. The `X-Supabase-Token`
+      alternate auth path was removed.
+- [x] **Frontend.** `localStorage` token reads/writes deleted; axios sends
+      `withCredentials`, echoes the CSRF cookie, and silently rotates once on a
+      401 before retrying the original request (single-flight). Logout is now a
+      server call that revokes the session. `pending_email` moved to
+      `sessionStorage`.
+- [x] Tests: `backend/tests/test_session_hardening.py` covers cookie flags,
+      CSRF accept/deny, Bearer bypass, refresh success/rejection, sign-out
+      revocation, rotation, replay and race behaviour.
+
 
 Goal: close the Phase 1 security gaps in §4b. One commit per item.
 
@@ -262,9 +297,9 @@ The user explicitly reordered this: **Dependabot first**.
 1. ~~**Dependabot remediation**~~ — done, Sprint 4; 210 → 1 accepted dev-only alert (§5.8)
 2. ~~**Supabase migrations**~~ — done, Sprint 5 (§2); no longer implicit
 3. ~~**Phase 1 security** — admin auth, webhook HMAC, webhook idempotency~~ —
-   done, Sprint 6. Session hardening (cookies/CSRF/refresh) remains deferred
+   done, Sprint 6. ~~Session hardening (cookies/CSRF/refresh)~~ — done, Sprint 7
 4. ~~**Real DB health probe**~~ — done, Sprint 6
-5. **Small cleanups** — debug `console.log`s done; stale remote branch pending
+5. ~~**Small cleanups**~~ — debug `console.log`s and the stale remote branch are done
 
 ### 4a. Supabase migrations — delivered in Sprint 5
 `supabase/migrations/20261103000000_init_casino_schema.sql` covers the five tables,
@@ -277,24 +312,21 @@ Open follow-ups, if the product needs them later:
 - A migration runner in CI (the project is linked, but CI has no DB credentials;
   `scripts/validate-migration.sh` still validates against a throwaway Postgres)
 
-### 4b. Phase 1 security — delivered in Sprint 6 (session hardening still deferred)
-- **`/api/auth/check-verification` is an auth bypass (NEW, found 2026-11-03)**:
-  `backend/app/api/auth.py:136-160` looks up a user by email and, if the address is
-  confirmed, returns an app JWT signed for that user id. Anyone who knows a verified
-  user's email can obtain that user's token. It must verify a Supabase email-confirmation
-  token (or be removed) before the security sprint ships anything else.
-  `POST /auth/verify-email` is also a no-op that returns `success: True` for any token.
-- **Admin auth absent**: `backend/app/api/admin.py:14,34` accept
-  `authorization: str = Header(None)` and never use it; `post users/{user_id}/balance`
-  is callable by anyone
-- **Webhook HMAC not implemented**: `backend/app/api/webhooks.py:19-21` is a commented stub
-- **Test webhook endpoints are public**: `/webhooks/test/deposit` lets anyone fabricate deposits
-- **No idempotency**: the DB now has a unique partial index on deposit
-  `metadata->>'tx_hash'`, but the app still races: two concurrent webhooks can both
-  pass the pre-check, then one insert fails and is reported as `failed` rather than
-  `skipped`. Handle the unique violation explicitly.
-- Session hardening still deferred: tokens in `localStorage`
-  (`frontend/lib/contexts/AuthContext.tsx`), no HttpOnly cookie / CSRF / refresh rotation
+### 4b. Phase 1 security — delivered in Sprint 6, session hardening in Sprint 7
+- **`/api/auth/check-verification` is an auth bypass (found 2026-11-03)**:
+  removed in Sprint 6; `POST /auth/verify-email` now only exchanges a real
+  Supabase confirmation token.
+- **Admin auth absent**: fixed in Sprint 6 (`X-Admin-Key`, constant-time, fails
+  closed when unconfigured).
+- **Webhook HMAC not implemented**: fixed in Sprint 6.
+- **Test webhook endpoints are public**: hidden unless
+  `ENABLE_TEST_WEBHOOKS=true`, and always admin-key gated.
+- **No idempotency**: fixed in Sprint 6 (DB unique index decides the race).
+- **Session hardening**: delivered in Sprint 7 — HttpOnly access/refresh
+  cookies, opaque rotating refresh tokens with reuse detection, double-submit
+  CSRF, and no tokens in JSON bodies. `localStorage` no longer holds auth data.
+  Remaining follow-up: prune expired `casino_sessions` rows (index exists, no
+  job yet).
 
 ### 4c. Real health probe — delivered in Sprint 6
 `backend/app/api/casino.py:15-29` calls `db.client.auth.get_session()` and reports
@@ -466,41 +498,47 @@ or build. **Review when `eslint@10` / `eslint-config-next` drop the 3.x pins.**
 
 ## 6. Next session: start here
 
-```bash
-cd <repo root>
-git switch main && git pull --ff-only
-git status -sb                    # expect clean; if dirty, stop and ask
+Sprint 7 (`sprint/07-session-hardening`) is **ready for review in PR #9**. It replaces the
+`localStorage` tokens with HttpOnly access/refresh cookies, adds double-submit CSRF, and
+rotates opaque refresh tokens with reuse detection. A human merges the PR; do not merge it
+yourself.
 
-git switch -c sprint/07-session-hardening
-```
+**Before deploying Sprint 7** (in order):
+
+1. Apply the new migration. The live project does **not** have `casino_sessions` yet:
+   `supabase db query --remote --file supabase/migrations/20261104000000_session_hardening.sql`,
+   then record `20261104000000 / session_hardening` in
+   `supabase_migrations.schema_migrations` (same pattern as Sprint 5).
+2. Do **not** re-apply the baseline: `schema_migrations` already records
+   `20261103000000`, and the live tables hold the original demo data.
+3. Set cookie flags for the deployment: `COOKIE_SECURE=true` on HTTPS. For plain-HTTP
+   local development add `COOKIE_SECURE=false` to the gitignored `backend/.env`. If the
+   UI and API are on different sites, use `COOKIE_SAMESITE=none` + `COOKIE_SECURE=true`
+   and set `COOKIE_DOMAIN`.
+4. The Next middleware reads the non-secret `casino_session` marker cookie set by the
+   API. That works because `localhost:3000` and `localhost:8000` are the same site; a
+   split-domain deployment needs a shared cookie domain (see §8).
+
+After the Sprint 7 PR is merged:
+1. Confirm CI on `main` is green.
+2. Optional follow-ups, in priority order:
+   - prune expired `casino_sessions` rows (add a scheduled delete; index exists)
+   - real `/api/casino/state` stats (§4d)
+   - real chain address generator (§4a)
+   - a CI migration runner (§4a)
 
 **Resume protocol (unchanged):** `git switch main && git pull --ff-only`; if a sprint is
 already in progress, `git switch <branch>` and read the §1 progress checklist instead.
-Recreate the toolchain from §1 (Python 3.12 venv, Node 22) before running
-`scripts/verify.sh`, and run `./scripts/validate-migration.sh` after touching SQL.
-
-**Current next step:** Sprint 6 (`sprint/06-security-phase-1`) is **ready for review**.
-It removes the `check-verification` token bypass, adds admin-key auth, signs inbound
-webhooks and hides the test endpoints, settles deposit races via the unique index, and
-replaces the fake health probe. A human merges the PR; do not merge it yourself.
-
-After the Sprint 6 PR is merged:
-1. Confirm CI on `main` is green.
-2. Start Sprint 7: **session hardening** (§4b last bullet) — move tokens out of
-   `localStorage` into HttpOnly cookies with CSRF protection and refresh rotation.
-3. Optional follow-ups: real chain address generator (§4a), real `/api/casino/state`
-   stats (§4d), and a CI migration runner (§4a).
-
-Do **not** re-apply the baseline migration: `supabase_migrations.schema_migrations`
-already records `20261103000000`, and the live tables hold the original demo data.
+Recreate the toolchain (Python 3.12 venv, Node 22) before running `scripts/verify.sh`, and
+run `./scripts/validate-migration.sh` after touching SQL.
 
 **Copy-paste resume prompt for the new session:**
 
 > Read `AGENTS.md` and `docs/handoff-crypto-casino.md` in full, then follow the resume
 > protocol: check `git log` / `git status`, recreate the CI-matching toolchain, and run
-> `scripts/verify.sh`. Execute Sprint 6 (Phase 1 security) from §4b in commit-sized steps,
-> starting with the `check-verification` auth bypass, updating §1 and §6 of the handoff at
-> each commit boundary. Open a ready-for-review PR and stop.
+> `scripts/verify.sh`. If the Sprint 7 PR is still open, stop and report its status. If it
+> is merged, apply `20261104000000_session_hardening.sql` to the live project and continue
+> with the optional follow-ups in §6, updating §1 and §6 at each commit boundary.
 
 `AGENTS.md` is auto-loaded by OpenCode, so the new agent should find that on its own. If it
 is started in plan mode it can only read and plan; switch it to build mode to execute.
@@ -556,6 +594,15 @@ Dependabot alerts only close once the fix reaches the default branch, so re-chec
 
 ## 8. Environment / tooling notes
 
+- **Sprint 7 cookies:** `casino_access`/`casino_refresh` are HttpOnly,
+  `casino_csrf` is readable (double-submit), and `casino_session` is a non-secret marker
+  read by the Next middleware. All are scoped to the API host; `localhost:3000` and
+  `localhost:8000` count as one site, which is why the middleware sees the marker. A
+  frontend/API split across different sites needs `COOKIE_DOMAIN`, `COOKIE_SECURE=true`
+  and `COOKIE_SAMESITE=none`.
+- `COOKIE_SECURE` defaults to `true`. Plain-HTTP local development should set
+  `COOKIE_SECURE=false` in the gitignored `backend/.env`; otherwise some browsers will
+  withhold the cookies.
 - `/tmp/opencode` is ephemeral — **it was wiped between sessions**. Anything that must
   survive belongs in this doc or in the repo.
 - `backend/.env` exists with `SUPABASE_URL`, `SUPABASE_KEY`, `SUPABASE_SECRET_KEY`,

@@ -17,18 +17,12 @@ function VerifyEmailContent() {
 
     const verifyEmail = useCallback(async (token: string) => {
         try {
-            // This endpoint will handle email confirmation
+            // The backend validates the token and sets HttpOnly session cookies.
             const response = await apiClient.post('/auth/verify-email', { token });
 
             if (response.data.success) {
                 setVerified(true);
-                localStorage.removeItem('pending_email');
-
-                // Auto-login after verification
-                localStorage.setItem('access_token', response.data.access_token);
-                if (response.data.supabase_token) {
-                    localStorage.setItem('supabase_token', response.data.supabase_token);
-                }
+                sessionStorage.removeItem('pending_email');
 
                 toast.success('Email verified! Redirecting to dashboard...');
                 setTimeout(() => {
@@ -42,8 +36,8 @@ function VerifyEmailContent() {
 
     useEffect(() => {
         const run = async () => {
-            // Get email from localStorage
-            const pendingEmail = localStorage.getItem('pending_email');
+            // Only a non-secret convenience value, set before the redirect.
+            const pendingEmail = sessionStorage.getItem('pending_email');
             if (pendingEmail) {
                 setEmail(pendingEmail);
             }

@@ -1,10 +1,11 @@
 
 import secrets
 
-from fastapi import Header, HTTPException, status
+from fastapi import Header, HTTPException, Request, status
 
 from app.auth import auth_service
 from app.config import settings
+from app.cookies import ACCESS_COOKIE, UNSAFE_METHODS, csrf_is_valid
 from app.schemas import CasinoUser
 
 
@@ -31,24 +32,40 @@ async def require_admin_key(
 
 # Dependency to get current user
 async def get_current_user_dep(
+    request: Request,
     authorization: str | None = Header(None),
-    x_supabase_token: str | None = Header(None)
 ) -> CasinoUser:
-    # Check for Authorization header
-    if not authorization or not authorization.startswith("Bearer "):
+    """Authenticate from the HttpOnly access cookie, or an explicit Bearer token.
+
+    Bearer clients are not vulnerable to CSRF (the browser does not attach the
+    token automatically), so the double-submit check applies only to cookie
+    authentication.
+    """
+    if authorization is not None:
+        if not authorization.startswith("Bearer "):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Missing or invalid Authorization header",
+            )
+        token = authorization.removeprefix("Bearer ").strip()
+        if not token:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Missing or invalid Authorization header",
+            )
+        return await auth_service.get_current_user(custom_jwt_token=token)
+
+    token = request.cookies.get(ACCESS_COOKIE)
+    if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing or invalid Authorization header"
+            detail="Not authenticated",
         )
 
-    custom_token = authorization.removeprefix("Bearer ").strip()
-    if not custom_token:
+    if request.method in UNSAFE_METHODS and not csrf_is_valid(request):
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing or invalid Authorization header"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="CSRF token missing or invalid",
         )
 
-    return await auth_service.get_current_user(
-        custom_jwt_token=custom_token,
-        supabase_token=x_supabase_token
-    )
+    return await auth_service.get_current_user(custom_jwt_token=token)

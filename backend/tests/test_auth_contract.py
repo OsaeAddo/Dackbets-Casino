@@ -56,7 +56,8 @@ async def test_signup_without_session_returns_confirmation(client, monkeypatch):
     assert body["user_id"] == "user-1"
     assert body["email"] == "new@example.com"
     assert body["requires_confirmation"] is True
-    assert body["access_token"] is None
+    assert "access_token" not in body
+    assert "supabase_token" not in body
     assert "check your email" in body["message"].lower()
     assert created == {
         "user_id": "user-1",
@@ -78,6 +79,11 @@ async def test_signin_then_me_returns_stable_user_id(client, monkeypatch):
     )
     monkeypatch.setattr(db, "get_user_by_id", lambda user_id: user)
 
+    async def fake_create_session(**kwargs):
+        return {"id": "session-1", **kwargs}
+
+    monkeypatch.setattr(casino_models, "create_session", fake_create_session)
+
     async def fake_get_profile(user_id):
         return {
             "username": "player",
@@ -96,12 +102,10 @@ async def test_signin_then_me_returns_stable_user_id(client, monkeypatch):
     assert signin_response.status_code == 200, signin_response.text
     signin_body = signin_response.json()
     assert signin_body["user_id"] == "user-1"
-    assert signin_body["access_token"]
+    assert "access_token" not in signin_body
+    assert signin_response.cookies.get("casino_access")
 
-    me_response = await client.get(
-        "/api/auth/me",
-        headers={"Authorization": f"Bearer {signin_body['access_token']}"},
-    )
+    me_response = await client.get("/api/auth/me")
     assert me_response.status_code == 200, me_response.text
     me = me_response.json()
     assert me["id"] == "user-1"

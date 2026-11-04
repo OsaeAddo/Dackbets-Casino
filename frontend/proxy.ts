@@ -3,8 +3,14 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function proxy(request: NextRequest) {
-  // Get token from cookies (set after login)
-  const token = request.cookies.get('access_token')?.value;
+  // Non-secret marker set with the HttpOnly auth cookies. The access cookie
+  // expires before the refresh cookie, so the marker decides whether the app
+  // should be allowed to attempt a rotation instead of bouncing to /login.
+  const hasSession = Boolean(
+    request.cookies.get('casino_session')?.value ||
+    request.cookies.get('casino_access')?.value
+  );
+  const hasAccess = Boolean(request.cookies.get('casino_access')?.value);
   
   const path = request.nextUrl.pathname;
   
@@ -18,12 +24,12 @@ export function proxy(request: NextRequest) {
   const isAuthPath = path === '/login' || path === '/register';
 
   // Redirect logic
-  if (!token && !isPublicPath) {
+  if (!hasSession && !isPublicPath) {
     // Not authenticated and trying to access protected route
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  if (token && isAuthPath) {
+  if (hasAccess && isAuthPath) {
     // Already authenticated and trying to access login/register
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }

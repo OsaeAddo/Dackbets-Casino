@@ -149,6 +149,70 @@ class CasinoModels:
         
         return client.table("casino_bets").insert(bet_data).execute()
     
+    # Sessions (refresh-token rotation)
+    async def create_session(
+        self,
+        user_id: str,
+        token_hash: str,
+        family_id: str,
+        expires_at: str,
+    ):
+        """Insert a refresh-token session and return the stored row."""
+        session_data = {
+            "user_id": user_id,
+            "token_hash": token_hash,
+            "family_id": family_id,
+            "expires_at": expires_at,
+        }
+        client = self.client
+        response = client.table("casino_sessions").insert(session_data).execute()
+        return response.data[0] if response.data else None
+
+    async def get_session_by_hash(self, token_hash: str):
+        """Return the session for a presented refresh token, if any."""
+        client = self.client
+        response = client.table("casino_sessions") \
+            .select("*") \
+            .eq("token_hash", token_hash) \
+            .execute()
+        return response.data[0] if response.data else None
+
+    async def claim_session_for_rotation(self, session_id: str) -> bool:
+        """Atomically revoke a session; False means another request won the race."""
+        client = self.client
+        response = client.table("casino_sessions") \
+            .update({"revoked_at": datetime.now(UTC).isoformat()}) \
+            .eq("id", session_id) \
+            .is_("revoked_at", "null") \
+            .execute()
+        return bool(response.data)
+
+    async def mark_session_replaced(self, session_id: str, replaced_by: str):
+        """Record which session replaced a rotated one (audit trail)."""
+        client = self.client
+        return client.table("casino_sessions") \
+            .update({"replaced_by": replaced_by}) \
+            .eq("id", session_id) \
+            .execute()
+
+    async def revoke_session_family(self, family_id: str):
+        """Revoke every still-active session in a rotation family."""
+        client = self.client
+        return client.table("casino_sessions") \
+            .update({"revoked_at": datetime.now(UTC).isoformat()}) \
+            .eq("family_id", family_id) \
+            .is_("revoked_at", "null") \
+            .execute()
+
+    async def revoke_session(self, session_id: str):
+        """Revoke a single session (sign-out of this device)."""
+        client = self.client
+        return client.table("casino_sessions") \
+            .update({"revoked_at": datetime.now(UTC).isoformat()}) \
+            .eq("id", session_id) \
+            .is_("revoked_at", "null") \
+            .execute()
+
     # House Stats
     async def update_house_stats(
         self,

@@ -77,7 +77,12 @@ if psql_run -c 'set role anon; select count(*) from public.casino_profiles;' >/d
     echo "FAIL: anon can read casino_profiles (RLS/grants regression)" >&2
     exit 1
 fi
+if psql_run -c 'set role anon; select count(*) from public.casino_sessions;' >/dev/null 2>&1; then
+    echo "FAIL: anon can read casino_sessions (RLS/grants regression)" >&2
+    exit 1
+fi
 psql_run -c "set role anon; select username from public.get_user_by_email('alice@example.com');" >/dev/null
 psql_run -c 'set role service_role; select count(*) from public.casino_bets;' >/dev/null
+psql_run -c 'set role service_role; select count(*) from public.casino_sessions;' >/dev/null
 
 echo "migration checks passed"

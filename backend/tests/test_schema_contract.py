@@ -167,3 +167,24 @@ def test_migration_declares_the_objects_the_api_uses():
     assert "unique index if not exists casino_transactions_tx_hash_uidx" in normalized
     assert "on public.casino_bets (user_id, timestamp desc)" in normalized
     assert "on public.casino_transactions (user_id, created_at desc)" in normalized
+
+
+SESSION_MIGRATION = (
+    Path(__file__).resolve().parents[2]
+    / "supabase"
+    / "migrations"
+    / "20261104000000_session_hardening.sql"
+)
+
+
+def test_session_migration_declares_the_rotation_table():
+    sql = SESSION_MIGRATION.read_text()
+    normalized = re.sub(r"\s+", " ", sql.lower())
+
+    assert "create table if not exists public.casino_sessions" in normalized
+    assert "token_hash text not null unique" in normalized
+    assert "family_id uuid not null default gen_random_uuid()" in normalized
+    assert "references auth.users (id) on delete cascade" in normalized
+    assert "alter table public.casino_sessions enable row level security" in normalized
+    assert "revoke all on public.casino_sessions" in normalized
+    assert "grant all on public.casino_sessions to service_role" in normalized
