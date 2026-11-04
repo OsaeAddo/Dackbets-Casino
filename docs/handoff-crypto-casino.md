@@ -12,20 +12,55 @@ sections 1–3 before touching anything. Section 6 is the immediate work order.
 
 ---
 
-## 1. Current state (verified 2026-11-03, Sprint 5 in progress)
+## 1. Current state (verified 2026-11-04, Sprint 5 merged and schema applied)
 
 | Item | Value |
 | --- | --- |
-| Branch | `sprint/05-supabase-migrations` (Sprint 5 in progress) |
-| HEAD | see `git log --oneline -1` on the sprint branch |
-| Sync | branched from `main` @ `1973291` (merge PR #5, dependency remediation) |
+| Branch | `chore/sprint-05-adopt-live-schema` (post-merge adoption docs + baseline guards) |
+| HEAD | see `git log --oneline -1` |
+| Sync | branched from `main` @ `2f2c0ff` (merge PR #6, Supabase migrations) |
 | Working tree | clean |
-| CI on `main` | success — CI + Graph Update both green on `1973291` |
-| Open PRs | **#6** `sprint(05): supabase migrations` — ready for review, awaiting human merge |
+| CI on `main` | success on `2f2c0ff` (CI + Graph Update) |
+| Open PRs | adoption PR (this branch) — ready for review, awaiting human merge |
 | Dependabot | **1 open** (was 210) — moderate `minimatch@3.1.5` in 6 dev-only eslint nodes; fixed upstream in 11.0.1, no 3.x patch. Accepted, see §5.8 |
-| Migrations | **`supabase/migrations/20261103000000_init_casino_schema.sql`** (Sprint 5) |
+| Migrations | **`supabase/migrations/20261103000000_init_casino_schema.sql`** — applied to project `kebogkndtbkwukdyavfz` (DackBets Casino) |
+| Migration history | `supabase_migrations.schema_migrations` has `20261103000000 / init_casino_schema` |
 | Stale remote branch | `origin/sprint/01-foundation` still exists (merged, never deleted) |
-| Secrets | `backend/.env` is gitignored (`git check-ignore` confirms); `frontend/.env.local` ignored |
+| Secrets | `backend/.env` is gitignored (`git check-ignore` confirms); `frontend/.env.local` ignored; `supabase/.temp/` now ignored |
+
+### Live schema adoption (2026-11-04)
+
+The Supabase project already had the five `casino_*` tables, two RPCs and a
+`user_profiles` view from the pre-versioning sprints. Applying the baseline failed:
+
+- `update_user_balance` existed as `returns void`, so `create or replace` raised
+  `SQLSTATE 42P13 cannot change return type of existing function`;
+- `user_profiles` selected straight from `auth.users` (`email` was `varchar`), so
+  `create or replace view` would also have failed;
+- `create table if not exists` silently skipped the drifted tables (nullable columns,
+  no precision/checks, missing `updated_at`, `house_stats` with `id`/`profit` and no
+  composite PK, missing `rounds`).
+
+Adopted **without data loss** (4 profiles / 10 wallets / 13 transactions / 13 bets /
+1 house row copied, counts verified afterwards):
+
+1. `supabase/adoption/20261104_detach_legacy_schema.sql` moved the five tables into
+   `legacy_20261104` (indexes/constraints follow the table).
+2. The baseline was applied via `supabase db query --remote --file` (the CLI's
+   `db push --remote` needs the DB password; the login-role route is blocked on this
+   project). Row mapping: `wallets.updated_at = created_at`,
+   `transactions.updated_at = created_at`, `house_stats.rounds = 0`, `profit` dropped.
+3. Verified: row counts, function return types, only `casino_profiles.username`
+   nullable, all checks/unique indexes/triggers present, RLS on, 0 policies,
+   `anon` denied on every table/view and on both mutating RPCs, service role allowed.
+   Live probes: service-role REST read `200`, anon read `401 / 42501`.
+4. Recorded the version in `supabase_migrations.schema_migrations`, then dropped
+   `legacy_20261104`. The pre-adoption row backup lives only in `/tmp/opencode`
+   (ephemeral, and it contains user data — never commit it).
+
+The baseline now drops the pre-versioning `update_user_balance` and `user_profiles`
+view before creating them, so a partial/pre-versioned database can be adopted by a
+plain `db push` (guards are no-ops on a fresh database). `supabase/.temp/` is ignored.
 
 
 ### Sprint 5 progress (`sprint/05-supabase-migrations`)
@@ -151,7 +186,7 @@ Verified at merge: `ruff` clean, `pytest` 8 passed, `tsc` clean, `next build` 18
 - 12 new lint findings from the upgraded `eslint-config-next` (React Compiler rules) fixed
   without suppressions
 
-### Sprint 5 — Supabase migrations (branch `sprint/05-supabase-migrations`)
+### Sprint 5 — Supabase migrations (PR #6, merge `2f2c0ff`) + live adoption
 - Versioned schema under `supabase/migrations/`, with SQL behaviour tests and a
   `scripts/validate-migration.sh` harness that runs against a throwaway Postgres
 - Deny-by-default RLS; all casino table access now uses the service-role client
@@ -159,12 +194,16 @@ Verified at merge: `ruff` clean, `pytest` 8 passed, `tsc` clean, `next build` 18
 - `metadata` is written as JSONB (was a JSON string); email lookup is an
   address-scoped RPC instead of an all-users view
 - `pytest` 8 → 14 (contract tests pin RPC names/params)
+- 2026-11-04: baseline applied to the live project after adopting the pre-versioning
+  tables (see §1); `update_user_balance` is now `returns jsonb` and the RPCs are
+  `security definer` with an empty `search_path`
 
 ### Delivered artifacts that still exist
 - Git history and the PRs above (the review packets in `/tmp/opencode` are gone)
 - `README.md`, `.github/workflows/ci.yml`, `scripts/verify.sh`, `backend/pyproject.toml`,
   `backend/requirements-dev.txt`, `frontend/package.json`
-- `supabase/migrations/`, `supabase/tests/`, `scripts/validate-migration.sh`
+- `supabase/migrations/`, `supabase/tests/`, `supabase/adoption/`,
+  `scripts/validate-migration.sh`
 
 ---
 
@@ -200,8 +239,8 @@ Open follow-ups, if the product needs them later:
   `{currency}_addr_<hex>` placeholders)
 - Per-user JWT-scoped DB access instead of service-role-only, if the frontend ever
   talks to Supabase directly
-- A migration runner in CI once a Supabase project exists (today only
-  `scripts/validate-migration.sh` against a throwaway Postgres)
+- A migration runner in CI (the project is linked, but CI has no DB credentials;
+  `scripts/validate-migration.sh` still validates against a throwaway Postgres)
 
 ### 4b. Phase 1 security (live gaps, deferred from Sprints 1–2)
 - **`/api/auth/check-verification` is an auth bypass (NEW, found 2026-11-03)**:
@@ -405,20 +444,19 @@ already in progress, `git switch sprint/05-supabase-migrations` and read the §1
 checklist instead. Recreate the toolchain from §1 (Python 3.12 venv, Node 22) before running
 `scripts/verify.sh`, and run `./scripts/validate-migration.sh` after touching SQL.
 
-**Current next step:** Sprint 5 is complete and **PR #6 is open, ready for review**. A human
-merges it — do not merge it yourself.
+**Current next step:** Sprint 5 is **merged and applied to the live project**. The
+adoption follow-up PR is open for review; a human merges it — do not merge it yourself.
 
-After #6 is merged:
-1. Confirm CI on `main` is green and the Vercel preview stayed healthy.
-2. Apply the migration to the Supabase project (`supabase init` if `supabase/config.toml`
-   is missing, then `supabase link --project-ref <ref> && supabase db push`; or paste
-   `supabase/migrations/20261103000000_init_casino_schema.sql` into the SQL editor). The API
-   will fail every casino table read until this is done, because RLS denies anon access.
-3. Start Sprint 6 from §4b: **Phase 1 security**. Fix the
+After the adoption PR is merged:
+1. Confirm CI on `main` is green.
+2. Start Sprint 6 from §4b: **Phase 1 security**. Fix the
    `/api/auth/check-verification` token bypass first, then admin auth, webhook HMAC, and
    duplicate-race handling.
-4. Optionally clear §4d small cleanups (debug `console.log`s in
+3. Optionally clear §4d small cleanups (debug `console.log`s in
    `frontend/app/(main)/profile/page.tsx`, delete stale `origin/sprint/01-foundation`).
+
+Do **not** re-apply the baseline migration: `supabase_migrations.schema_migrations`
+already records `20261103000000`, and the live tables hold the original demo data.
 
 **Copy-paste resume prompt for the new session:**
 
