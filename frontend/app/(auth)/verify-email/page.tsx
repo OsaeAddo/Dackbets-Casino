@@ -13,12 +13,10 @@ function VerifyEmailContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [email, setEmail] = useState<string>('');
-    const [checking, setChecking] = useState(false);
     const [verified, setVerified] = useState(false);
 
     const verifyEmail = useCallback(async (token: string) => {
         try {
-            setChecking(true);
             // This endpoint will handle email confirmation
             const response = await apiClient.post('/auth/verify-email', { token });
 
@@ -39,8 +37,6 @@ function VerifyEmailContent() {
             }
         } catch {
             toast.error('Verification failed. Please try again.');
-        } finally {
-            setChecking(false);
         }
     }, [router]);
 
