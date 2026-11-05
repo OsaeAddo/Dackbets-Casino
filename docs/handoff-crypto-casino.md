@@ -21,7 +21,7 @@ sections 1–3 before touching anything. Section 6 is the immediate work order.
 | Sync | branched from `main` @ `d977c4b` (merge PR #9, Sprint 7 session hardening) |
 | Working tree | clean after the Sprint 8 commits |
 | CI on `main` | success on `d977c4b` |
-| Open PRs | Sprint 8 PR — ready for review, awaiting human merge |
+| Open PRs | **PR #10** (`sprint/08-session-cleanup`) — ready for review, awaiting human merge |
 | Dependabot | **1 open** (was 210) — moderate `minimatch@3.1.5` in 6 dev-only eslint nodes; accepted, see §5.8 |
 | Migrations | baseline `20261103000000_init_casino_schema.sql` + `20261104000000_session_hardening.sql` |
 | Migration status | both applied to project `kebogkndtbkwukdyavfz`; both recorded in `supabase_migrations.schema_migrations` |
@@ -521,7 +521,7 @@ or build. **Review when `eslint@10` / `eslint-config-next` drop the 3.x pins.**
 
 ## 6. Next session: start here
 
-Sprint 8 (`sprint/08-session-cleanup`) is **ready for review**. It prunes expired
+Sprint 8 (`sprint/08-session-cleanup`) is **ready for review in PR #10**. It prunes expired
 and revoked `casino_sessions` rows from the API process every
 `SESSION_CLEANUP_INTERVAL_SECONDS` (6h default) with a 7-day retention, because
 `pg_cron` is not enabled on the project. A human merges the PR; do not merge it
