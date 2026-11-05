@@ -12,23 +12,47 @@ sections 1–3 before touching anything. Section 6 is the immediate work order.
 
 ---
 
-## 1. Current state (verified 2026-11-04, Sprint 7 in review)
+## 1. Current state (verified 2026-11-05, Sprint 8 in review)
 
 | Item | Value |
 | --- | --- |
-| Branch | `sprint/07-session-hardening` (session hardening, PR pending) |
+| Branch | `sprint/08-session-cleanup` (stale session pruning, PR pending) |
 | HEAD | see `git log --oneline -1` |
-| Sync | branched from `main` @ `a33bce5` (merge PR #8, Phase 1 security) |
-| Working tree | clean after the Sprint 7 commits |
-| CI on `main` | success on `a33bce5` |
-| Open PRs | **PR #9** (`sprint/07-session-hardening`) — ready for review, awaiting human merge |
+| Sync | branched from `main` @ `d977c4b` (merge PR #9, Sprint 7 session hardening) |
+| Working tree | clean after the Sprint 8 commits |
+| CI on `main` | success on `d977c4b` |
+| Open PRs | Sprint 8 PR — ready for review, awaiting human merge |
 | Dependabot | **1 open** (was 210) — moderate `minimatch@3.1.5` in 6 dev-only eslint nodes; accepted, see §5.8 |
-| Migrations | baseline `20261103000000_init_casino_schema.sql` + **`20261104000000_session_hardening.sql`** (adds `casino_sessions`) |
-| Migration status | baseline applied to project `kebogkndtbkwukdyavfz`; **session migration validated locally only — apply before deploying Sprint 7** |
+| Migrations | baseline `20261103000000_init_casino_schema.sql` + `20261104000000_session_hardening.sql` |
+| Migration status | both applied to project `kebogkndtbkwukdyavfz`; both recorded in `supabase_migrations.schema_migrations` |
 | Stale remote branch | `origin/sprint/01-foundation` was deleted in Sprint 6 |
 | Secrets | `backend/.env` is gitignored; `frontend/.env.local` ignored; `supabase/.temp/` ignored |
 
-### Sprint 7 progress (`sprint/07-session-hardening`)
+### Sprint 8 progress (`sprint/08-session-cleanup`)
+
+Goal: close the Sprint 7 follow-up — expired/revoked `casino_sessions` rows
+accumulate forever, so prune them.
+
+- [x] **Live schema check.** `casino_sessions` is present on the project with the
+      migration recorded (`20261104000000 / session_hardening`), RLS enabled, 0
+      policies, 8 columns and the expected defaults. No re-apply needed.
+- [x] **`pg_cron` is not installed**, so the cleanup runs in the API process
+      instead of a database job.
+- [x] `CasinoModels.prune_sessions(cutoff)` deletes rows whose `expires_at` or
+      `revoked_at` is older than the retention cutoff; active sessions are never
+      touched and revoked rows are kept long enough for replay detection.
+- [x] `app/session_cleanup.py` prunes on startup and every
+      `SESSION_CLEANUP_INTERVAL_SECONDS` (default 6h), logging and retrying on
+      failure. Wired through the FastAPI `lifespan` and cancelled on shutdown.
+- [x] Settings: `session_cleanup_interval_seconds=21600`,
+      `session_retention_days=7`.
+- [x] Tests: `backend/tests/test_session_cleanup.py` pins the cutoff/filters,
+      the delete count, failure isolation and the sleep interval.
+- [x] Final `scripts/verify.sh` on Python 3.12.13 / Node 22.23.4 — EXIT=0,
+      52 tests, 18/18 pages.
+
+### Sprint 7 progress (`sprint/07-session-hardening`, merged as PR #9)
+
 
 Goal: close the deferred Phase 1 item — tokens out of `localStorage`, HttpOnly
 cookies, CSRF protection and refresh rotation.
@@ -325,8 +349,7 @@ Open follow-ups, if the product needs them later:
 - **Session hardening**: delivered in Sprint 7 — HttpOnly access/refresh
   cookies, opaque rotating refresh tokens with reuse detection, double-submit
   CSRF, and no tokens in JSON bodies. `localStorage` no longer holds auth data.
-  Remaining follow-up: prune expired `casino_sessions` rows (index exists, no
-  job yet).
+  The stale-row follow-up is delivered in Sprint 8 (periodic in-process prune).
 
 ### 4c. Real health probe — delivered in Sprint 6
 `backend/app/api/casino.py:15-29` calls `db.client.auth.get_session()` and reports
@@ -498,34 +521,31 @@ or build. **Review when `eslint@10` / `eslint-config-next` drop the 3.x pins.**
 
 ## 6. Next session: start here
 
-Sprint 7 (`sprint/07-session-hardening`) is **ready for review in PR #9**. It replaces the
-`localStorage` tokens with HttpOnly access/refresh cookies, adds double-submit CSRF, and
-rotates opaque refresh tokens with reuse detection. A human merges the PR; do not merge it
+Sprint 8 (`sprint/08-session-cleanup`) is **ready for review**. It prunes expired
+and revoked `casino_sessions` rows from the API process every
+`SESSION_CLEANUP_INTERVAL_SECONDS` (6h default) with a 7-day retention, because
+`pg_cron` is not enabled on the project. A human merges the PR; do not merge it
 yourself.
 
-**Before deploying Sprint 7** (in order):
+Sprint 7's migration is **already applied and recorded** on the live project, and
+CI on `main` is green at `d977c4b`. The only remaining deployment step is cookie
+configuration on the host:
 
-1. Apply the new migration. The live project does **not** have `casino_sessions` yet:
-   `supabase db query --remote --file supabase/migrations/20261104000000_session_hardening.sql`,
-   then record `20261104000000 / session_hardening` in
-   `supabase_migrations.schema_migrations` (same pattern as Sprint 5).
-2. Do **not** re-apply the baseline: `schema_migrations` already records
-   `20261103000000`, and the live tables hold the original demo data.
-3. Set cookie flags for the deployment: `COOKIE_SECURE=true` on HTTPS. For plain-HTTP
-   local development add `COOKIE_SECURE=false` to the gitignored `backend/.env`. If the
-   UI and API are on different sites, use `COOKIE_SAMESITE=none` + `COOKIE_SECURE=true`
-   and set `COOKIE_DOMAIN`.
-4. The Next middleware reads the non-secret `casino_session` marker cookie set by the
-   API. That works because `localhost:3000` and `localhost:8000` are the same site; a
-   split-domain deployment needs a shared cookie domain (see §8).
+- Set cookie flags for the deployment: `COOKIE_SECURE=true` on HTTPS. For plain-HTTP
+  local development add `COOKIE_SECURE=false` to the gitignored `backend/.env`. If the
+  UI and API are on different sites, use `COOKIE_SAMESITE=none` + `COOKIE_SECURE=true`
+  and set `COOKIE_DOMAIN`.
+- The Next middleware reads the non-secret `casino_session` marker cookie set by the
+  API. That works because `localhost:3000` and `localhost:8000` are the same site; a
+  split-domain deployment needs a shared cookie domain (see §8).
 
-After the Sprint 7 PR is merged:
+After the Sprint 8 PR is merged:
 1. Confirm CI on `main` is green.
 2. Optional follow-ups, in priority order:
-   - prune expired `casino_sessions` rows (add a scheduled delete; index exists)
    - real `/api/casino/state` stats (§4d)
    - real chain address generator (§4a)
    - a CI migration runner (§4a)
+
 
 **Resume protocol (unchanged):** `git switch main && git pull --ff-only`; if a sprint is
 already in progress, `git switch <branch>` and read the §1 progress checklist instead.
@@ -536,9 +556,9 @@ run `./scripts/validate-migration.sh` after touching SQL.
 
 > Read `AGENTS.md` and `docs/handoff-crypto-casino.md` in full, then follow the resume
 > protocol: check `git log` / `git status`, recreate the CI-matching toolchain, and run
-> `scripts/verify.sh`. If the Sprint 7 PR is still open, stop and report its status. If it
-> is merged, apply `20261104000000_session_hardening.sql` to the live project and continue
-> with the optional follow-ups in §6, updating §1 and §6 at each commit boundary.
+> `scripts/verify.sh`. If the Sprint 8 PR is still open, stop and report its status. If it
+> is merged, continue with the optional follow-ups in §6, updating §1 and §6 at each
+> commit boundary.
 
 `AGENTS.md` is auto-loaded by OpenCode, so the new agent should find that on its own. If it
 is started in plan mode it can only read and plan; switch it to build mode to execute.
