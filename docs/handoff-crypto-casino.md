@@ -21,7 +21,7 @@ sections 1–3 before touching anything. Section 6 is the immediate work order.
 | Sync | branched from `main` @ `998aed5` (merge PR #11, Sprint 9 real public stats) |
 | Working tree | feature commit pending; docs updated with it |
 | CI on `main` | success on `998aed5` |
-| Open PRs | Sprint 10 PR — opening next |
+| Open PRs | **PR #12** (`sprint/10-admin-stats`) — ready for review, awaiting human merge |
 | Dependabot | **1 open** (was 210) — moderate `minimatch@3.1.5` in 6 dev-only eslint nodes; accepted, see §5.8 |
 | Migrations | baseline `20261103000000_init_casino_schema.sql` + `20261104000000_session_hardening.sql` |
 | Migration status | both applied to project `kebogkndtbkwukdyavfz`; both recorded in `supabase_migrations.schema_migrations` |
@@ -569,7 +569,7 @@ or build. **Review when `eslint@10` / `eslint-config-next` drop the 3.x pins.**
 
 ## 6. Next session: start here
 
-Sprint 10 (`sprint/10-admin-stats`) is **ready for review**. It replaces the
+Sprint 10 (`sprint/10-admin-stats`) is **ready for review in PR #12**. It replaces the
 hardcoded `/api/admin/stats` payload with real aggregates: registered users, users
 with a live session, wallet balances per currency, 24h stake volume, and all-time
 house profit. A human merges the PR; do not merge it yourself.
