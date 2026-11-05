@@ -21,7 +21,7 @@ sections 1–3 before touching anything. Section 6 is the immediate work order.
 | Sync | branched from `main` @ `5907c5f` (merge PR #10, Sprint 8 session cleanup) |
 | Working tree | feature commit made; docs updated with it |
 | CI on `main` | success on `5907c5f` |
-| Open PRs | Sprint 9 PR — opening next |
+| Open PRs | **PR #11** (`sprint/09-real-casino-state`) — ready for review, awaiting human merge |
 | Dependabot | **1 open** (was 210) — moderate `minimatch@3.1.5` in 6 dev-only eslint nodes; accepted, see §5.8 |
 | Migrations | baseline `20261103000000_init_casino_schema.sql` + `20261104000000_session_hardening.sql` |
 | Migration status | both applied to project `kebogkndtbkwukdyavfz`; both recorded in `supabase_migrations.schema_migrations` |
@@ -546,7 +546,7 @@ or build. **Review when `eslint@10` / `eslint-config-next` drop the 3.x pins.**
 
 ## 6. Next session: start here
 
-Sprint 9 (`sprint/09-real-casino-state`) is **ready for review**. It replaces the
+Sprint 9 (`sprint/09-real-casino-state`) is **ready for review in PR #11**. It replaces the
 hardcoded `/api/casino/state` payload with aggregates from `casino_profiles`,
 `casino_house_stats` and `casino_bets` (top wins, distinct players per game over 24h).
 A human merges the PR; do not merge it yourself.
