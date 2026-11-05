@@ -1,8 +1,8 @@
 # Handoff — crypto-casino
 
 Prepared: 2026-11-03
-Repo: `OsaeAddo/crypto-casino`
-Remote: `git@github.com:OsaeAddo/crypto-casino.git`
+Repo: `OsaeAddo/Dackbets-Casino`
+Remote: `git@github.com:OsaeAddo/Dackbets-Casino.git`
 
 This file is versioned with the code and is the authoritative copy. Agent working rules
 live in [`AGENTS.md`](../AGENTS.md).
@@ -516,7 +516,7 @@ be near zero if A–C land. `deepmerge` (low) disappears with `shadcn`.
 
 ```bash
 mkdir -p /tmp/opencode
-gh api "repos/OsaeAddo/crypto-casino/dependabot/alerts?state=open&per_page=100&sort=severity&direction=desc" \
+gh api "repos/OsaeAddo/Dackbets-Casino/dependabot/alerts?state=open&per_page=100&sort=severity&direction=desc" \
   --paginate > /tmp/opencode/dependabot-open.json
 (cd frontend && npm audit --json > /tmp/opencode/npm-audit.json || true)
 python3 -c "import json;print(len(json.load(open('/tmp/opencode/dependabot-open.json'))),'alerts')"
