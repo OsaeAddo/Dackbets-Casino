@@ -149,6 +149,58 @@ class CasinoModels:
         
         return client.table("casino_bets").insert(bet_data).execute()
     
+    # Public stats (analytics tables)
+    async def count_profiles(self) -> int:
+        """Count registered casino profiles."""
+        client = self.client
+        response = client.table("casino_profiles") \
+            .select("id", count="exact", head=True) \
+            .execute()
+        return int(response.count or 0)
+
+    async def get_house_stats_rows(self) -> list[dict[str, Any]]:
+        """Every `casino_house_stats` row (one per game/currency pair)."""
+        client = self.client
+        response = client.table("casino_house_stats") \
+            .select("game_type,currency,total_wagered,total_paid,rounds") \
+            .execute()
+        return response.data or []
+
+    async def get_top_wins(self, limit: int = 5) -> list[dict[str, Any]]:
+        """Largest recorded wins, highest first."""
+        client = self.client
+        response = client.table("casino_bets") \
+            .select("user_id,game_type,currency,win_amount") \
+            .gt("win_amount", 0) \
+            .order("win_amount", desc=True) \
+            .limit(limit) \
+            .execute()
+        return response.data or []
+
+    async def get_recent_bettors(self, since: str) -> list[dict[str, Any]]:
+        """Distinct-player inputs for bets placed since ``since``."""
+        client = self.client
+        response = client.table("casino_bets") \
+            .select("game_type,user_id") \
+            .gte("timestamp", since) \
+            .execute()
+        return response.data or []
+
+    async def get_usernames(self, user_ids: list[str]) -> dict[str, str]:
+        """Map user ids to public usernames (empty when nobody has one)."""
+        if not user_ids:
+            return {}
+        client = self.client
+        response = client.table("casino_profiles") \
+            .select("user_id,username") \
+            .in_("user_id", user_ids) \
+            .execute()
+        return {
+            row["user_id"]: row["username"]
+            for row in response.data or []
+            if row.get("user_id") and row.get("username")
+        }
+
     # Sessions (refresh-token rotation)
     async def create_session(
         self,
