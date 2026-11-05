@@ -1,7 +1,9 @@
 import logging
 
+from app.admin_stats import build_admin_stats
 from app.dependencies import require_admin_key
 from app.models import casino_models
+from app.schemas import AdminStatsResponse
 from fastapi import APIRouter, Depends, HTTPException, status
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
@@ -30,14 +32,14 @@ async def admin_adjust_balance(
         )
 
 
-@router.get("/stats", tags=["Admin"])
+@router.get("/stats", response_model=AdminStatsResponse, tags=["Admin"])
 async def get_admin_stats(_: None = Depends(require_admin_key)):
-    """Admin: Get casino statistics"""
-    # TODO: Implement real stats
-    return {
-        "total_users": 1500,
-        "online_users": 243,
-        "total_balance": {"BTC": 125.5, "ETH": 2450.2},
-        "daily_volume": {"BTC": 12.3, "ETH": 245.6},
-        "house_profit": {"BTC": 2.5, "ETH": 45.2},
-    }
+    """Admin: real casino statistics from the operational tables."""
+    try:
+        return await build_admin_stats()
+    except Exception as e:  # noqa: BLE001 - API boundary: report an unavailable aggregate as 503
+        logger.error("Admin stats query failed: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Admin stats unavailable",
+        )
