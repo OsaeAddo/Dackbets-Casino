@@ -12,23 +12,46 @@ sections 1–3 before touching anything. Section 6 is the immediate work order.
 
 ---
 
-## 1. Current state (verified 2026-11-05, Sprint 8 in review)
+## 1. Current state (verified 2026-11-05, Sprint 9 in progress)
 
 | Item | Value |
 | --- | --- |
-| Branch | `sprint/08-session-cleanup` (stale session pruning, PR pending) |
+| Branch | `sprint/09-real-casino-state` (real `/api/casino/state` stats) |
 | HEAD | see `git log --oneline -1` |
-| Sync | branched from `main` @ `d977c4b` (merge PR #9, Sprint 7 session hardening) |
-| Working tree | clean after the Sprint 8 commits |
-| CI on `main` | success on `d977c4b` |
-| Open PRs | **PR #10** (`sprint/08-session-cleanup`) — ready for review, awaiting human merge |
+| Sync | branched from `main` @ `5907c5f` (merge PR #10, Sprint 8 session cleanup) |
+| Working tree | feature commit made; docs updated with it |
+| CI on `main` | success on `5907c5f` |
+| Open PRs | Sprint 9 PR — opening next |
 | Dependabot | **1 open** (was 210) — moderate `minimatch@3.1.5` in 6 dev-only eslint nodes; accepted, see §5.8 |
 | Migrations | baseline `20261103000000_init_casino_schema.sql` + `20261104000000_session_hardening.sql` |
 | Migration status | both applied to project `kebogkndtbkwukdyavfz`; both recorded in `supabase_migrations.schema_migrations` |
 | Stale remote branch | `origin/sprint/01-foundation` was deleted in Sprint 6 |
 | Secrets | `backend/.env` is gitignored; `frontend/.env.local` ignored; `supabase/.temp/` ignored |
 
-### Sprint 8 progress (`sprint/08-session-cleanup`)
+### Sprint 9 progress (`sprint/09-real-casino-state`)
+
+Goal: §4d follow-up — `/api/casino/state` returned hardcoded placeholder stats
+(1000 players, fabricated wins/hot games/jackpot).
+
+- [x] `app/casino_stats.py` aggregates the real analytics tables:
+      `casino_profiles` (player count), `casino_house_stats` (wagered/paid per
+      currency) and `casino_bets` (top wins, distinct players per game over 24h).
+- [x] `CasinoModels` queries: `count_profiles`, `get_house_stats_rows`,
+      `get_top_wins`, `get_recent_bettors`, `get_usernames` (top winners only).
+- [x] Public-safe player labels: username when set, otherwise `anon-<6 hex>`;
+      emails are never exposed.
+- [x] `jackpot_amount` is the house-retained margin per currency
+      (`wagered - paid`, clamped at 0). There is no progressive-jackpot table, so
+      the endpoint reports a real derived figure instead of inventing a pool.
+- [x] Endpoint converts any query failure into `503 Casino state unavailable`.
+- [x] Tests: `backend/tests/test_casino_state.py` covers currency sums, margin
+      clamping, anonymization, distinct-player ordering, the endpoint payload and
+      the 503 path.
+- [x] Backend checks on Python 3.12.13 — ruff clean, 57 tests pass.
+- [ ] Final `scripts/verify.sh` on Python 3.12.13 / Node 22.23.4 (after the
+      feature commit).
+
+### Sprint 8 progress (`sprint/08-session-cleanup`, merged as PR #10)
 
 Goal: close the Sprint 7 follow-up — expired/revoked `casino_sessions` rows
 accumulate forever, so prune them.
@@ -356,11 +379,13 @@ Open follow-ups, if the product needs them later:
 `"connected"` whenever it doesn't throw — it never touches Postgres. Replace with a cheap
 `SELECT` and return 503 on failure.
 
-### 4d. Small cleanups (console.logs done in Sprint 6)
+### 4d. Small cleanups (console.logs done in Sprint 6, state stats in Sprint 9)
 - `frontend/app/(main)/profile/page.tsx:135-136` — remove
   `console.log('Full user object:', …)` / `console.log('User ID:', …)`
 - `git push origin --delete sprint/01-foundation`
-- `/api/casino/state` returns hardcoded placeholder stats
+- ~~`/api/casino/state` returns hardcoded placeholder stats~~ — done in Sprint 9
+  (real aggregates from `casino_house_stats` / `casino_bets`). Note the admin
+  `/api/admin/stats` endpoint is still placeholder; see §6.
 
 ---
 
@@ -521,14 +546,14 @@ or build. **Review when `eslint@10` / `eslint-config-next` drop the 3.x pins.**
 
 ## 6. Next session: start here
 
-Sprint 8 (`sprint/08-session-cleanup`) is **ready for review in PR #10**. It prunes expired
-and revoked `casino_sessions` rows from the API process every
-`SESSION_CLEANUP_INTERVAL_SECONDS` (6h default) with a 7-day retention, because
-`pg_cron` is not enabled on the project. A human merges the PR; do not merge it
-yourself.
+Sprint 9 (`sprint/09-real-casino-state`) is **ready for review**. It replaces the
+hardcoded `/api/casino/state` payload with aggregates from `casino_profiles`,
+`casino_house_stats` and `casino_bets` (top wins, distinct players per game over 24h).
+A human merges the PR; do not merge it yourself.
 
-Sprint 7's migration is **already applied and recorded** on the live project, and
-CI on `main` is green at `d977c4b`. The only remaining deployment step is cookie
+Sprint 8 is merged as PR #10 (in-process stale session pruning). Sprint 7's
+migration is **already applied and recorded** on the live project, and CI on
+`main` is green at `5907c5f`. The only remaining deployment step is cookie
 configuration on the host:
 
 - Set cookie flags for the deployment: `COOKIE_SECURE=true` on HTTPS. For plain-HTTP
@@ -539,10 +564,11 @@ configuration on the host:
   API. That works because `localhost:3000` and `localhost:8000` are the same site; a
   split-domain deployment needs a shared cookie domain (see §8).
 
-After the Sprint 8 PR is merged:
+After the Sprint 9 PR is merged:
 1. Confirm CI on `main` is green.
 2. Optional follow-ups, in priority order:
-   - real `/api/casino/state` stats (§4d)
+   - real `/api/admin/stats` (still placeholder; needs aggregates over
+     `casino_transactions` and profiles)
    - real chain address generator (§4a)
    - a CI migration runner (§4a)
 
@@ -556,7 +582,7 @@ run `./scripts/validate-migration.sh` after touching SQL.
 
 > Read `AGENTS.md` and `docs/handoff-crypto-casino.md` in full, then follow the resume
 > protocol: check `git log` / `git status`, recreate the CI-matching toolchain, and run
-> `scripts/verify.sh`. If the Sprint 8 PR is still open, stop and report its status. If it
+> `scripts/verify.sh`. If the Sprint 9 PR is still open, stop and report its status. If it
 > is merged, continue with the optional follow-ups in §6, updating §1 and §6 at each
 > commit boundary.
 
