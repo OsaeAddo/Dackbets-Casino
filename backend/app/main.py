@@ -1,4 +1,6 @@
+import asyncio
 import logging
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -12,6 +14,7 @@ load_dotenv(dotenv_path=env_path)
 
 from app import config
 from app.api.router import api_router
+from app.session_cleanup import run_session_cleanup
 
 # Enable debug logging
 logging.basicConfig(
@@ -22,10 +25,23 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    """Run background housekeeping for the lifetime of the API process."""
+    cleanup_task = asyncio.create_task(run_session_cleanup())
+    try:
+        yield
+    finally:
+        cleanup_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await cleanup_task
+
+
 app = FastAPI(
     title="Crypto Casino API",
     description="Backend API for Crypto Casino App",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan,
 )
 
 # CORS configuration
