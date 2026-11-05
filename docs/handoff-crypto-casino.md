@@ -12,23 +12,45 @@ sections 1–3 before touching anything. Section 6 is the immediate work order.
 
 ---
 
-## 1. Current state (verified 2026-11-05, Sprint 9 in progress)
+## 1. Current state (verified 2026-11-05, Sprint 10 in progress)
 
 | Item | Value |
 | --- | --- |
-| Branch | `sprint/09-real-casino-state` (real `/api/casino/state` stats) |
+| Branch | `sprint/10-admin-stats` (real `/api/admin/stats`) |
 | HEAD | see `git log --oneline -1` |
-| Sync | branched from `main` @ `5907c5f` (merge PR #10, Sprint 8 session cleanup) |
-| Working tree | feature commit made; docs updated with it |
-| CI on `main` | success on `5907c5f` |
-| Open PRs | **PR #11** (`sprint/09-real-casino-state`) — ready for review, awaiting human merge |
+| Sync | branched from `main` @ `998aed5` (merge PR #11, Sprint 9 real public stats) |
+| Working tree | feature commit pending; docs updated with it |
+| CI on `main` | success on `998aed5` |
+| Open PRs | Sprint 10 PR — opening next |
 | Dependabot | **1 open** (was 210) — moderate `minimatch@3.1.5` in 6 dev-only eslint nodes; accepted, see §5.8 |
 | Migrations | baseline `20261103000000_init_casino_schema.sql` + `20261104000000_session_hardening.sql` |
 | Migration status | both applied to project `kebogkndtbkwukdyavfz`; both recorded in `supabase_migrations.schema_migrations` |
 | Stale remote branch | `origin/sprint/01-foundation` was deleted in Sprint 6 |
 | Secrets | `backend/.env` is gitignored; `frontend/.env.local` ignored; `supabase/.temp/` ignored |
 
-### Sprint 9 progress (`sprint/09-real-casino-state`)
+### Sprint 10 progress (`sprint/10-admin-stats`)
+
+Goal: §4d follow-up — `/api/admin/stats` returned hardcoded placeholder numbers
+(1500 users, fabricated balances/volume/profit).
+
+- [x] `app/admin_stats.py` aggregates the operational tables:
+      `casino_profiles` (users), `casino_sessions` (live sessions),
+      `casino_wallets` (balances), `casino_bets` (24h stake volume) and
+      `casino_house_stats` (all-time wagered/paid).
+- [x] `online_users` counts distinct users with a session that is unrevoked and
+      unexpired.
+- [x] `house_profit` is `wagered - paid` and is **not** clamped, so admin data
+      honestly shows a negative house result when players are ahead.
+- [x] `AdminStatsResponse` schema added; query failures return
+      `503 Admin stats unavailable`.
+- [x] Tests: `backend/tests/test_admin_stats.py` covers balance/volume sums,
+      distinct online users, negative house profit, the endpoint payload and the
+      503 path. `test_security.py` now stubs the aggregate for the auth check.
+- [x] Backend checks on Python 3.12.13 — ruff clean, 62 tests pass.
+- [x] Final `scripts/verify.sh` on Python 3.12.13 / Node 22.23.4 — EXIT=0,
+      62 tests, 18/18 pages.
+
+### Sprint 9 progress (`sprint/09-real-casino-state`, merged as PR #11)
 
 Goal: §4d follow-up — `/api/casino/state` returned hardcoded placeholder stats
 (1000 players, fabricated wins/hot games/jackpot).
@@ -48,8 +70,8 @@ Goal: §4d follow-up — `/api/casino/state` returned hardcoded placeholder stat
       clamping, anonymization, distinct-player ordering, the endpoint payload and
       the 503 path.
 - [x] Backend checks on Python 3.12.13 — ruff clean, 57 tests pass.
-- [ ] Final `scripts/verify.sh` on Python 3.12.13 / Node 22.23.4 (after the
-      feature commit).
+- [x] Final `scripts/verify.sh` on Python 3.12.13 / Node 22.23.4 — EXIT=0,
+      57 tests, 18/18 pages.
 
 ### Sprint 8 progress (`sprint/08-session-cleanup`, merged as PR #10)
 
@@ -379,13 +401,14 @@ Open follow-ups, if the product needs them later:
 `"connected"` whenever it doesn't throw — it never touches Postgres. Replace with a cheap
 `SELECT` and return 503 on failure.
 
-### 4d. Small cleanups (console.logs done in Sprint 6, state stats in Sprint 9)
+### 4d. Small cleanups (console.logs done in Sprint 6, stats in Sprints 9–10)
 - `frontend/app/(main)/profile/page.tsx:135-136` — remove
   `console.log('Full user object:', …)` / `console.log('User ID:', …)`
 - `git push origin --delete sprint/01-foundation`
 - ~~`/api/casino/state` returns hardcoded placeholder stats~~ — done in Sprint 9
-  (real aggregates from `casino_house_stats` / `casino_bets`). Note the admin
-  `/api/admin/stats` endpoint is still placeholder; see §6.
+  (real aggregates from `casino_house_stats` / `casino_bets`).
+- ~~`/api/admin/stats` returns hardcoded placeholder stats~~ — done in Sprint 10
+  (users, live sessions, wallet balances, 24h volume, all-time house profit).
 
 ---
 
@@ -546,15 +569,14 @@ or build. **Review when `eslint@10` / `eslint-config-next` drop the 3.x pins.**
 
 ## 6. Next session: start here
 
-Sprint 9 (`sprint/09-real-casino-state`) is **ready for review in PR #11**. It replaces the
-hardcoded `/api/casino/state` payload with aggregates from `casino_profiles`,
-`casino_house_stats` and `casino_bets` (top wins, distinct players per game over 24h).
-A human merges the PR; do not merge it yourself.
+Sprint 10 (`sprint/10-admin-stats`) is **ready for review**. It replaces the
+hardcoded `/api/admin/stats` payload with real aggregates: registered users, users
+with a live session, wallet balances per currency, 24h stake volume, and all-time
+house profit. A human merges the PR; do not merge it yourself.
 
-Sprint 8 is merged as PR #10 (in-process stale session pruning). Sprint 7's
-migration is **already applied and recorded** on the live project, and CI on
-`main` is green at `5907c5f`. The only remaining deployment step is cookie
-configuration on the host:
+Sprint 9 is merged as PR #11 (real public casino state). Sprint 7's migration is
+**already applied and recorded** on the live project, and CI on `main` is green at
+`998aed5`. The only remaining deployment step is cookie configuration on the host:
 
 - Set cookie flags for the deployment: `COOKIE_SECURE=true` on HTTPS. For plain-HTTP
   local development add `COOKIE_SECURE=false` to the gitignored `backend/.env`. If the
@@ -564,13 +586,12 @@ configuration on the host:
   API. That works because `localhost:3000` and `localhost:8000` are the same site; a
   split-domain deployment needs a shared cookie domain (see §8).
 
-After the Sprint 9 PR is merged:
+After the Sprint 10 PR is merged:
 1. Confirm CI on `main` is green.
 2. Optional follow-ups, in priority order:
-   - real `/api/admin/stats` (still placeholder; needs aggregates over
-     `casino_transactions` and profiles)
    - real chain address generator (§4a)
    - a CI migration runner (§4a)
+   - per-user JWT-scoped DB access, only if the frontend talks to Supabase directly
 
 
 **Resume protocol (unchanged):** `git switch main && git pull --ff-only`; if a sprint is
@@ -582,7 +603,7 @@ run `./scripts/validate-migration.sh` after touching SQL.
 
 > Read `AGENTS.md` and `docs/handoff-crypto-casino.md` in full, then follow the resume
 > protocol: check `git log` / `git status`, recreate the CI-matching toolchain, and run
-> `scripts/verify.sh`. If the Sprint 9 PR is still open, stop and report its status. If it
+> `scripts/verify.sh`. If the Sprint 10 PR is still open, stop and report its status. If it
 > is merged, continue with the optional follow-ups in §6, updating §1 and §6 at each
 > commit boundary.
 
