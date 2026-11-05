@@ -213,6 +213,23 @@ class CasinoModels:
             .is_("revoked_at", "null") \
             .execute()
 
+    async def prune_sessions(self, cutoff: str) -> int:
+        """Delete rows that expired or were revoked before ``cutoff``.
+
+        Active sessions are never touched. Revoked rows are kept until the
+        retention window passes so replay detection still recognises them.
+        """
+        client = self.client
+        expired = client.table("casino_sessions") \
+            .delete() \
+            .lt("expires_at", cutoff) \
+            .execute()
+        revoked = client.table("casino_sessions") \
+            .delete() \
+            .lt("revoked_at", cutoff) \
+            .execute()
+        return len(expired.data or []) + len(revoked.data or [])
+
     # House Stats
     async def update_house_stats(
         self,

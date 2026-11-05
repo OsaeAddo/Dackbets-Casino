@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     # Sessions
     # Opaque refresh tokens live in HttpOnly cookies and rotate on every use.
     refresh_token_expire_days: int = 30
+    # Housekeeping: stale rows are pruned by the API process on this interval.
+    # Keep revoked rows for a while so replay detection still sees them.
+    session_cleanup_interval_seconds: int = 21600  # 6 hours
+    session_retention_days: int = 7
     # Cookies are Secure by default; local development over plain HTTP must set
     # COOKIE_SECURE=false. Use COOKIE_SAMESITE=none (with Secure) when the API
     # and the UI are served from different sites.
