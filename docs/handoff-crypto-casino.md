@@ -21,7 +21,7 @@ sections 1–3 before touching anything. Section 6 is the immediate work order.
 | Sync | branched from `main` @ `bbf5d75` (merge PR #12, Sprint 10 real admin stats) |
 | Working tree | feature commit pending; docs updated with it |
 | CI on `main` | success on `bbf5d75` |
-| Open PRs | Sprint 11 PR — opening next |
+| Open PRs | **PR #13** (`sprint/11-chain-addresses`) — ready for review, awaiting human merge |
 | Dependabot | **1 open** (was 210) — moderate `minimatch@3.1.5` in 6 dev-only eslint nodes; accepted, see §5.8 |
 | Migrations | baseline `20261103000000_init_casino_schema.sql` + `20261104000000_session_hardening.sql` |
 | Migration status | both applied to project `kebogkndtbkwukdyavfz`; both recorded in `supabase_migrations.schema_migrations` |
@@ -601,7 +601,7 @@ or build. **Review when `eslint@10` / `eslint-config-next` drop the 3.x pins.**
 
 ## 6. Next session: start here
 
-Sprint 11 (`sprint/11-chain-addresses`) is **ready for review**. It replaces the
+Sprint 11 (`sprint/11-chain-addresses`) is **ready for review in PR #13**. It replaces the
 fabricated `{currency}_addr_<hex>` wallet addresses with chain-valid ones (BTC
 base58check P2PKH, EVM EIP-55, SOL base58) and validates withdrawal destinations
 before queueing a payout. The addresses are demo-only: they are not derived from a
