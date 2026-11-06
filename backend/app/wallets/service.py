@@ -5,6 +5,7 @@ from datetime import UTC, datetime, timedelta
 # from tatum_sdk_python import TatumSDK, Network
 from app.database import db
 from app.models import casino_models
+from app.wallets.addresses import generate_address, normalize_address
 
 logger = logging.getLogger(__name__)
 
@@ -25,10 +26,9 @@ class WalletService:
                 logger.debug(f"Found the existing wallet: {response} \n with type: {type(response)}")
                 return response.data[0]
             
-            # Create new wallet
-            # TODO: Generate actual blockchain address
-            # For now, use a placeholder
-            wallet_address = f"{currency}_addr_{uuid.uuid4().hex[:16]}"
+            # Create new wallet. Addresses are chain-valid but demo-only: see
+            # app/wallets/addresses.py before accepting real deposits.
+            wallet_address = generate_address(currency)
             
             wallet_data = {
                 "user_id": user_id,
@@ -85,6 +85,9 @@ class WalletService:
     async def create_withdrawal(self, user_id: str, currency: str, amount: float, address: str) -> dict:
         """Create a withdrawal request"""
         try:
+            # Reject malformed destinations before queueing a payout.
+            address = normalize_address(currency, address)
+
             # Check balance
             profile = await casino_models.get_user_profile(user_id)
             balance = profile.get("balance", {})
