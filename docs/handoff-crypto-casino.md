@@ -12,23 +12,53 @@ sections 1–3 before touching anything. Section 6 is the immediate work order.
 
 ---
 
-## 1. Current state (verified 2026-11-05, Sprint 10 in progress)
+## 1. Current state (verified 2026-11-06, Sprint 11 in progress)
 
 | Item | Value |
 | --- | --- |
-| Branch | `sprint/10-admin-stats` (real `/api/admin/stats`) |
+| Branch | `sprint/11-chain-addresses` (chain-valid wallet addresses) |
 | HEAD | see `git log --oneline -1` |
-| Sync | branched from `main` @ `998aed5` (merge PR #11, Sprint 9 real public stats) |
+| Sync | branched from `main` @ `bbf5d75` (merge PR #12, Sprint 10 real admin stats) |
 | Working tree | feature commit pending; docs updated with it |
-| CI on `main` | success on `998aed5` |
-| Open PRs | **PR #12** (`sprint/10-admin-stats`) — ready for review, awaiting human merge |
+| CI on `main` | success on `bbf5d75` |
+| Open PRs | Sprint 11 PR — opening next |
 | Dependabot | **1 open** (was 210) — moderate `minimatch@3.1.5` in 6 dev-only eslint nodes; accepted, see §5.8 |
 | Migrations | baseline `20261103000000_init_casino_schema.sql` + `20261104000000_session_hardening.sql` |
 | Migration status | both applied to project `kebogkndtbkwukdyavfz`; both recorded in `supabase_migrations.schema_migrations` |
 | Stale remote branch | `origin/sprint/01-foundation` was deleted in Sprint 6 |
 | Secrets | `backend/.env` is gitignored; `frontend/.env.local` ignored; `supabase/.temp/` ignored |
 
-### Sprint 10 progress (`sprint/10-admin-stats`)
+### Sprint 11 progress (`sprint/11-chain-addresses`)
+
+Goal: §4a follow-up — wallets were created with fabricated
+`{currency}_addr_<hex>` strings that no chain would accept.
+
+- [x] `app/wallets/addresses.py` generates chain-valid addresses with the
+      standard library only:
+      - BTC: base58check P2PKH (version `0x00`, 20-byte hash160)
+      - ETH / USDT / USDC / BNB: 20-byte EVM account with an EIP-55 checksum
+      - SOL: base58-encoded 32-byte public key
+- [x] Local Keccak-256 (original padding, not SHA3) for EIP-55, plus base58
+      encode/decode helpers; verified against the empty-string and `abc`
+      known vectors.
+- [x] `normalize_address()` validates withdrawal destinations per chain:
+      base58check for BTC, EIP-55 for mixed-case EVM input, 32-byte base58 for
+      SOL. Malformed destinations raise `ValueError` → API `400`.
+- [x] `WalletService.get_or_create_wallet()` uses the generator, and
+      `create_withdrawal()` validates/normalizes the destination before any
+      database call.
+- [x] Tests: `backend/tests/test_wallet_addresses.py` covers keccak vectors,
+      base58 round-trip, per-chain formats, checksum/typo rejection, wallet
+      creation and withdrawal validation/normalization.
+- [x] Backend checks on Python 3.12.13 — ruff clean, 81 tests pass.
+- [x] Final `scripts/verify.sh` on Python 3.12.13 / Node 22.23.4 — EXIT=0,
+      81 tests, 18/18 pages.
+
+> Demo-only: these addresses are chain-valid but not derived from a custody
+> key, so nobody can spend funds sent to them. Replace this module with a
+> custody provider (Tatum/HD wallet) before accepting real deposits.
+
+### Sprint 10 progress (`sprint/10-admin-stats`, merged as PR #12)
 
 Goal: §4d follow-up — `/api/admin/stats` returned hardcoded placeholder numbers
 (1500 users, fabricated balances/volume/profit).
@@ -374,8 +404,10 @@ The user explicitly reordered this: **Dependabot first**.
 `supabase/migrations/20261103000000_init_casino_schema.sql` covers the five tables,
 the three RPCs, the `user_profiles` view, indexes, RLS, and the deposit replay guard.
 Open follow-ups, if the product needs them later:
-- A real chain address generator (the wallet service still fabricates
-  `{currency}_addr_<hex>` placeholders)
+- ~~A real chain address generator (the wallet service still fabricates
+  `{currency}_addr_<hex>` placeholders)~~ — done in Sprint 11: BTC base58check,
+  EVM EIP-55, SOL base58, plus withdrawal-destination validation. Addresses are
+  chain-valid but demo-only (not backed by a custody key).
 - Per-user JWT-scoped DB access instead of service-role-only, if the frontend ever
   talks to Supabase directly
 - A migration runner in CI (the project is linked, but CI has no DB credentials;
@@ -569,14 +601,16 @@ or build. **Review when `eslint@10` / `eslint-config-next` drop the 3.x pins.**
 
 ## 6. Next session: start here
 
-Sprint 10 (`sprint/10-admin-stats`) is **ready for review in PR #12**. It replaces the
-hardcoded `/api/admin/stats` payload with real aggregates: registered users, users
-with a live session, wallet balances per currency, 24h stake volume, and all-time
-house profit. A human merges the PR; do not merge it yourself.
+Sprint 11 (`sprint/11-chain-addresses`) is **ready for review**. It replaces the
+fabricated `{currency}_addr_<hex>` wallet addresses with chain-valid ones (BTC
+base58check P2PKH, EVM EIP-55, SOL base58) and validates withdrawal destinations
+before queueing a payout. The addresses are demo-only: they are not derived from a
+custody key, so a real deployment must swap in Tatum or an HD wallet first. A human
+merges the PR; do not merge it yourself.
 
-Sprint 9 is merged as PR #11 (real public casino state). Sprint 7's migration is
+Sprint 10 is merged as PR #12 (real admin stats). Sprint 7's migration is
 **already applied and recorded** on the live project, and CI on `main` is green at
-`998aed5`. The only remaining deployment step is cookie configuration on the host:
+`bbf5d75`. The only remaining deployment step is cookie configuration on the host:
 
 - Set cookie flags for the deployment: `COOKIE_SECURE=true` on HTTPS. For plain-HTTP
   local development add `COOKIE_SECURE=false` to the gitignored `backend/.env`. If the
@@ -586,12 +620,12 @@ Sprint 9 is merged as PR #11 (real public casino state). Sprint 7's migration is
   API. That works because `localhost:3000` and `localhost:8000` are the same site; a
   split-domain deployment needs a shared cookie domain (see §8).
 
-After the Sprint 10 PR is merged:
+After the Sprint 11 PR is merged:
 1. Confirm CI on `main` is green.
 2. Optional follow-ups, in priority order:
-   - real chain address generator (§4a)
    - a CI migration runner (§4a)
    - per-user JWT-scoped DB access, only if the frontend talks to Supabase directly
+   - swap the demo address generator for a custody provider before real deposits
 
 
 **Resume protocol (unchanged):** `git switch main && git pull --ff-only`; if a sprint is
@@ -603,7 +637,7 @@ run `./scripts/validate-migration.sh` after touching SQL.
 
 > Read `AGENTS.md` and `docs/handoff-crypto-casino.md` in full, then follow the resume
 > protocol: check `git log` / `git status`, recreate the CI-matching toolchain, and run
-> `scripts/verify.sh`. If the Sprint 10 PR is still open, stop and report its status. If it
+> `scripts/verify.sh`. If the Sprint 11 PR is still open, stop and report its status. If it
 > is merged, continue with the optional follow-ups in §6, updating §1 and §6 at each
 > commit boundary.
 
