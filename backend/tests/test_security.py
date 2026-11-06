@@ -102,6 +102,17 @@ async def test_admin_api_fails_closed_when_unconfigured(client, monkeypatch):
 async def test_admin_api_requires_the_configured_key(client, monkeypatch):
     monkeypatch.setattr(settings, "admin_api_key", "admin-secret")
 
+    async def fake_stats():
+        return {
+            "total_users": 0,
+            "online_users": 0,
+            "total_balance": {},
+            "daily_volume": {},
+            "house_profit": {},
+        }
+
+    monkeypatch.setattr("app.api.admin.build_admin_stats", fake_stats)
+
     missing = await client.get("/api/admin/stats")
     wrong = await client.get(
         "/api/admin/stats",

@@ -201,6 +201,33 @@ class CasinoModels:
             if row.get("user_id") and row.get("username")
         }
 
+    async def get_active_session_user_ids(self, now: str) -> list[str]:
+        """Users holding a session that is neither revoked nor expired."""
+        client = self.client
+        response = client.table("casino_sessions") \
+            .select("user_id") \
+            .is_("revoked_at", "null") \
+            .gt("expires_at", now) \
+            .execute()
+        return [row["user_id"] for row in response.data or [] if row.get("user_id")]
+
+    async def get_wallet_balances(self) -> list[dict[str, Any]]:
+        """Every wallet's currency and balance (one row per user/currency)."""
+        client = self.client
+        response = client.table("casino_wallets") \
+            .select("currency,balance") \
+            .execute()
+        return response.data or []
+
+    async def get_bets_since(self, since: str) -> list[dict[str, Any]]:
+        """Currency and stake for bets placed since ``since``."""
+        client = self.client
+        response = client.table("casino_bets") \
+            .select("currency,amount") \
+            .gte("timestamp", since) \
+            .execute()
+        return response.data or []
+
     # Sessions (refresh-token rotation)
     async def create_session(
         self,

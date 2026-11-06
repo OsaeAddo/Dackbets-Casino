@@ -219,6 +219,13 @@ class AdminUserUpdate(BaseModel):
     kyc_status: str | None = None
     is_active: bool | None = None
 
+class AdminStatsResponse(BaseModel):
+    total_users: int
+    online_users: int
+    total_balance: dict[str, float]
+    daily_volume: dict[str, float]
+    house_profit: dict[str, float]
+
 class PayoutCalculation(BaseModel):
     game_type: GameType
     bet_amount: float
