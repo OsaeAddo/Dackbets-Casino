@@ -12,23 +12,49 @@ sections 1–3 before touching anything. Section 6 is the immediate work order.
 
 ---
 
-## 1. Current state (verified 2026-11-06, Sprint 11 in progress)
+## 1. Current state (verified 2026-11-07, Sprint 12 in progress)
 
 | Item | Value |
 | --- | --- |
-| Branch | `sprint/11-chain-addresses` (chain-valid wallet addresses) |
+| Branch | `sprint/12-auth-form-hotfix` (credential-in-URL hotfix) |
 | HEAD | see `git log --oneline -1` |
-| Sync | branched from `main` @ `bbf5d75` (merge PR #12, Sprint 10 real admin stats) |
+| Sync | branched from `main` @ `591249c` (merge PR #13, Sprint 11 chain addresses) |
 | Working tree | feature commit pending; docs updated with it |
-| CI on `main` | success on `bbf5d75` |
-| Open PRs | **PR #13** (`sprint/11-chain-addresses`) — ready for review, awaiting human merge |
+| CI on `main` | success on `591249c` |
+| Open PRs | Sprint 12 PR — ready for review, awaiting human merge |
 | Dependabot | **1 open** (was 210) — moderate `minimatch@3.1.5` in 6 dev-only eslint nodes; accepted, see §5.8 |
 | Migrations | baseline `20261103000000_init_casino_schema.sql` + `20261104000000_session_hardening.sql` |
 | Migration status | both applied to project `kebogkndtbkwukdyavfz`; both recorded in `supabase_migrations.schema_migrations` |
 | Stale remote branch | `origin/sprint/01-foundation` was deleted in Sprint 6 |
 | Secrets | `backend/.env` is gitignored; `frontend/.env.local` ignored; `supabase/.temp/` ignored |
 
-### Sprint 11 progress (`sprint/11-chain-addresses`)
+### Sprint 12 progress (`sprint/12-auth-form-hotfix`)
+
+Goal: close the credential-in-URL flaw found in the security review. On a LAN
+origin (`172.20.10.4:3000`) Next 16 blocked the dev chunks, React never
+hydrated, and the auth forms fell back to a native `GET` that serialised
+`email`, `username`, `password` and `confirmPassword` into the query string.
+
+- [x] `RegisterForm` / `LoginForm`: removed every credential `name` attribute,
+      switched the field handler to an explicit field key, added `method="post"`
+      as a leak-safe fallback, and disabled submit until hydration
+      (`useSyncExternalStore` server snapshot `false` → client `true`).
+- [x] `frontend/next.config.ts`: `allowedDevOrigins` from `ALLOWED_DEV_ORIGINS`
+      (comma-separated, documented in `frontend/.env.example`) so LAN dev
+      hydration works instead of silently failing.
+- [x] `frontend/proxy.ts`: matcher now excludes every `_next` path, not just
+      `_next/static` and `_next/image`; a redirected asset request aborts
+      hydration.
+- [x] Playwright added (`frontend/e2e/auth-forms.spec.ts`): asserts no named
+      credential inputs, hydration enables submit, and a blocked client bundle
+      cannot put credentials in the URL for either form.
+- [x] CI gains a `Frontend e2e (Node 22)` job; `scripts/verify.sh` runs the
+      suite after `npm run build`.
+- [x] `frontend/AGENTS.md` (Next 16 generated) committed so the tree stays clean.
+- [x] Final `scripts/verify.sh` on Python 3.12.13 / Node 22.23.4 — EXIT=0,
+      81 tests, 18/18 pages, 5/5 Playwright e2e.
+
+### Sprint 11 progress (`sprint/11-chain-addresses`, merged as PR #13)
 
 Goal: §4a follow-up — wallets were created with fabricated
 `{currency}_addr_<hex>` strings that no chain would accept.
@@ -601,45 +627,59 @@ or build. **Review when `eslint@10` / `eslint-config-next` drop the 3.x pins.**
 
 ## 6. Next session: start here
 
-Sprint 11 (`sprint/11-chain-addresses`) is **ready for review in PR #13**. It replaces the
-fabricated `{currency}_addr_<hex>` wallet addresses with chain-valid ones (BTC
-base58check P2PKH, EVM EIP-55, SOL base58) and validates withdrawal destinations
-before queueing a payout. The addresses are demo-only: they are not derived from a
-custody key, so a real deployment must swap in Tatum or an HD wallet first. A human
-merges the PR; do not merge it yourself.
+Sprint 12 (`sprint/12-auth-form-hotfix`) is **ready for review**. It fixes the
+credential-in-URL flaw: auth inputs no longer have `name` attributes, submit is
+disabled until React hydrates, the dev-origin allow-list is configurable, the
+proxy matcher ignores all `_next` assets, and Playwright covers the unhydrated
+submit path. A human merges the PR; do not merge it yourself.
 
-Sprint 10 is merged as PR #12 (real admin stats). Sprint 7's migration is
-**already applied and recorded** on the live project, and CI on `main` is green at
-`bbf5d75`. The only remaining deployment step is cookie configuration on the host:
+Sprint 11 is merged as PR #13 (chain-valid demo addresses). Sprint 10 is merged
+as PR #12 (real admin stats). Sprint 7's migration is **already applied and
+recorded** on the live project, and CI on `main` is green at `591249c`.
 
-- Set cookie flags for the deployment: `COOKIE_SECURE=true` on HTTPS. For plain-HTTP
-  local development add `COOKIE_SECURE=false` to the gitignored `backend/.env`. If the
-  UI and API are on different sites, use `COOKIE_SAMESITE=none` + `COOKIE_SECURE=true`
-  and set `COOKIE_DOMAIN`.
-- The Next middleware reads the non-secret `casino_session` marker cookie set by the
-  API. That works because `localhost:3000` and `localhost:8000` are the same site; a
-  split-domain deployment needs a shared cookie domain (see §8).
+Deployment step still outstanding: set `COOKIE_SECURE=true` on HTTPS. For
+plain-HTTP local development add `COOKIE_SECURE=false` to the gitignored
+`backend/.env`. If the UI and API are on different sites, use
+`COOKIE_SAMESITE=none` + `COOKIE_SECURE=true` and set `COOKIE_DOMAIN`. The Next
+proxy reads the non-secret `casino_session` marker cookie set by the API, which
+works because `localhost:3000` and `localhost:8000` are the same site.
 
-After the Sprint 11 PR is merged:
-1. Confirm CI on `main` is green.
-2. Optional follow-ups, in priority order:
-   - a CI migration runner (§4a)
-   - per-user JWT-scoped DB access, only if the frontend talks to Supabase directly
-   - swap the demo address generator for a custody provider before real deposits
+After the Sprint 12 PR is merged, the next work is the rest of the security
+review, in priority order:
+
+1. **Sprint 13 — auth hardening**
+   - per-IP/per-email rate limits on sign-in, sign-up, refresh, verify-email
+   - generic sign-up errors (no user enumeration) and stop logging emails
+   - backend password/username validation to match the frontend rules
+   - clear auth cookies on every refresh failure; remove the proxy's
+     cookie-presence redirect so a stale access cookie cannot loop
+   - security headers (CSP, HSTS, X-Frame-Options, Referrer-Policy)
+2. **Sprint 14 — input/webhook hardening**
+   - deposit amount positive/finite, currency and tx-hash validation
+   - sanitised webhook error responses
+   - generate deposit QR codes locally instead of calling `api.qrserver.com`
+   - fix the verify-email replay effect and the hardcoded Mailpit link
+3. Optional ops follow-ups: a CI migration runner (§4a), per-user JWT-scoped DB
+   access only if the frontend talks to Supabase directly, and a custody
+   provider before real deposits.
+
+**Local e2e note:** the first `scripts/verify.sh` run needs
+`cd frontend && npx playwright install chromium`; the suite serves the built app
+on port 3100.
 
 
 **Resume protocol (unchanged):** `git switch main && git pull --ff-only`; if a sprint is
 already in progress, `git switch <branch>` and read the §1 progress checklist instead.
-Recreate the toolchain (Python 3.12 venv, Node 22) before running `scripts/verify.sh`, and
+Recreate the toolchain (Python 3.12 venv, Node 22) and run
+`cd frontend && npx playwright install chromium` before running `scripts/verify.sh`, and
 run `./scripts/validate-migration.sh` after touching SQL.
 
 **Copy-paste resume prompt for the new session:**
 
 > Read `AGENTS.md` and `docs/handoff-crypto-casino.md` in full, then follow the resume
 > protocol: check `git log` / `git status`, recreate the CI-matching toolchain, and run
-> `scripts/verify.sh`. If the Sprint 11 PR is still open, stop and report its status. If it
-> is merged, continue with the optional follow-ups in §6, updating §1 and §6 at each
-> commit boundary.
+> `scripts/verify.sh`. If the Sprint 12 PR is still open, stop and report its status. If it
+> is merged, continue with Sprint 13 in §6, updating §1 and §6 at each commit boundary.
 
 `AGENTS.md` is auto-loaded by OpenCode, so the new agent should find that on its own. If it
 is started in plan mode it can only read and plan; switch it to build mode to execute.

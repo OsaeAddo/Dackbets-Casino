@@ -20,5 +20,6 @@ run "backend pytest" bash -c "cd '$ROOT/backend' && '$PYTHON' -m pytest -q"
 run "frontend eslint" bash -c "cd '$ROOT/frontend' && npm run lint"
 run "frontend tsc" bash -c "cd '$ROOT/frontend' && npx tsc --noEmit"
 run "frontend build" bash -c "cd '$ROOT/frontend' && npm run build"
+run "frontend e2e" bash -c "cd '$ROOT/frontend' && npm run test:e2e"
 
 echo "==> All checks passed"

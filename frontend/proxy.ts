@@ -43,11 +43,14 @@ export const config = {
     /*
      * Match all request paths except for the ones starting with:
      * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
+     * - _next (all Next.js build assets, including HMR and client chunks)
      * - favicon.ico (favicon file)
-     * - public folder
+     * - images (public images)
+     *
+     * Excluding every `_next` path matters: if the proxy intercepts an asset
+     * request it can redirect it to /login, which aborts hydration and leaves
+     * client forms unhandled.
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|images).*)',
+    '/((?!api|_next|favicon.ico|images).*)',
   ],
 };

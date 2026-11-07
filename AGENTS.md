@@ -28,13 +28,16 @@ CI is the contract: **Python 3.12** and **Node 22**. Local versions may be newer
 claim CI parity from a newer runtime, say which versions you actually ran.
 
 ```bash
-# One shot: ruff + pytest + eslint + tsc + build, logs to /tmp/opencode
+# One shot: ruff + pytest + eslint + tsc + build + Playwright e2e, logs to /tmp/opencode
 PYTHON=/path/to/venv/bin/python ./scripts/verify.sh
 
 # Individually
 cd backend  && ruff check app tests && pytest -q
-cd frontend && npm run lint && npx tsc --noEmit && npm run build
+cd frontend && npm run lint && npx tsc --noEmit && npm run build && npm run test:e2e
 ```
+
+The first e2e run needs the browser once: `cd frontend && npx playwright install chromium`.
+The suite serves the production build on port 3100, so `npm run build` must run first.
 
 `npm run lint` is `eslint . --max-warnings 0` — **any warning fails the gate**.
 

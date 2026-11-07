@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,9 +10,24 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { EyeIcon, EyeOffIcon, Loader2Icon } from 'lucide-react';
 import Link from 'next/link';
 
+// Hydration probe: the server snapshot is false, the client snapshot is true,
+// so the submit button stays disabled until React has attached the handler.
+const subscribeToNothing = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export default function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
+  // Keep the native submit path unreachable until React has hydrated the form,
+  // so a click or Enter can never fall back to a browser GET.
+  const hydrated = useSyncExternalStore(
+    subscribeToNothing,
+    getClientSnapshot,
+    getServerSnapshot,
+  );
+
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -42,7 +57,10 @@ export default function LoginForm() {
         </CardDescription>
       </CardHeader>
       
-      <form onSubmit={handleSubmit}>
+      {/* Inputs deliberately have no `name`: credentials must never be
+          serialised into a native form submission. `method="post"` keeps a
+          fallback submission out of the URL and browser history. */}
+      <form onSubmit={handleSubmit} method="post">
         <CardContent className="space-y-4">
           {error && (
             <Alert variant="destructive">
@@ -102,7 +120,7 @@ export default function LoginForm() {
           <Button 
             type="submit" 
             className="w-full" 
-            disabled={isLoading}
+            disabled={isLoading || !hydrated}
           >
             {isLoading ? (
               <>
