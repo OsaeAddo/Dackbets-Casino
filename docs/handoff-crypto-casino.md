@@ -12,21 +12,38 @@ sections 1–3 before touching anything. Section 6 is the immediate work order.
 
 ---
 
-## 1. Current state (verified 2026-11-07, Sprint 12 in progress)
+## 1. Current state (verified 2026-11-08, manual QA pass)
 
 | Item | Value |
 | --- | --- |
-| Branch | `sprint/12-auth-form-hotfix` (credential-in-URL hotfix) |
+| Branch | `chore/manual-qa-runbook` (docs only) |
 | HEAD | see `git log --oneline -1` |
-| Sync | branched from `main` @ `591249c` (merge PR #13, Sprint 11 chain addresses) |
-| Working tree | feature commit pending; docs updated with it |
-| CI on `main` | success on `591249c` |
-| Open PRs | Sprint 12 PR — ready for review, awaiting human merge |
+| Sync | branched from `main` @ `d627791` (merge PR #14, Sprint 12) |
+| Working tree | runbook commit pending; no application code changes |
+| CI on `main` | success on `d627791` |
+| Open PRs | runbook PR — ready for review; Sprints 12/13 frozen until QA sign-off |
 | Dependabot | **1 open** (was 210) — moderate `minimatch@3.1.5` in 6 dev-only eslint nodes; accepted, see §5.8 |
 | Migrations | baseline `20261103000000_init_casino_schema.sql` + `20261104000000_session_hardening.sql` |
 | Migration status | both applied to project `kebogkndtbkwukdyavfz`; both recorded in `supabase_migrations.schema_migrations` |
 | Stale remote branch | `origin/sprint/01-foundation` was deleted in Sprint 6 |
 | Secrets | `backend/.env` is gitignored; `frontend/.env.local` ignored; `supabase/.temp/` ignored |
+
+### Manual QA pass (2026-11-08)
+
+Sprint 12 is merged (`d627791`). Sprints 12 and 13 are **on ice** until a manual QA
+pass over everything built so far is signed off. Runbook and results:
+[`docs/manual-qa.md`](manual-qa.md).
+
+- Pass 1, desktop on localhost: all functional checks pass.
+- Pass 2, LAN origin `172.20.10.4:3000` (Pixel 5 profile): 11/12, only a dev-only
+  console warning.
+- `npm run build` clean; `npm run test:e2e` 5/5; production build re-checked.
+- **One real defect found: F-1** — `GET /api/admin/stats` reports `total_balance`
+  as all zeros because it sums `casino_wallets.balance`, which nothing writes.
+  Balances live in `casino_profiles.balance`. Not yet fixed (code freeze).
+- No Sprint 12 regression: the credential-in-URL path stays closed with the
+  client bundle blocked, on both localhost and the LAN origin.
+- Outstanding: confirm on a physical phone, then teardown (§7 of the runbook).
 
 ### Sprint 12 progress (`sprint/12-auth-form-hotfix`)
 
@@ -627,15 +644,27 @@ or build. **Review when `eslint@10` / `eslint-config-next` drop the 3.x pins.**
 
 ## 6. Next session: start here
 
-Sprint 12 (`sprint/12-auth-form-hotfix`) is **ready for review**. It fixes the
-credential-in-URL flaw: auth inputs no longer have `name` attributes, submit is
-disabled until React hydrates, the dev-origin allow-list is configurable, the
-proxy matcher ignores all `_next` assets, and Playwright covers the unhydrated
-submit path. A human merges the PR; do not merge it yourself.
+Sprint 12 is **merged** as PR #14 (`d627791`). Sprints 12 and 13 stay **frozen**
+until the manual QA pass is signed off. Runbook, environment notes and the filled-in
+results are in [`docs/manual-qa.md`](manual-qa.md); read it before doing anything else.
 
-Sprint 11 is merged as PR #13 (chain-valid demo addresses). Sprint 10 is merged
-as PR #12 (real admin stats). Sprint 7's migration is **already applied and
-recorded** on the live project, and CI on `main` is green at `591249c`.
+Remaining QA work:
+
+1. Confirm on a physical phone at `http://172.20.10.4:3000` (Pass 2, checks P1–P10).
+   The automated Pixel 5 run already passes 11/12; the only miss is the dev-only
+   `cursor-pointer` prop warning.
+2. Triage the findings in §6 of the runbook:
+   - **F-1 (real bug, Sprint 10):** admin `total_balance` always 0 — sums
+     `casino_wallets.balance`, which is never written; aggregate
+     `casino_profiles.balance` instead.
+   - F-2/F-3 are dev-only console noise; F-4/F-5 are minor/external.
+3. Teardown per §7: remove the QA overrides from `backend/.env`
+   (`ENABLE_TEST_WEBHOOKS`, `REQUIRE_KYC_FOR_WITHDRAWAL`, `FRONTEND_URLS`;
+   keep `COOKIE_SECURE=false` only while developing over plain HTTP), restore or
+   delete `frontend/.env.local`, and decide whether to delete the
+   `qa+20261108@example.com` account.
+4. Only then unfreeze Sprint 13 and fix F-1 alongside it (or as a one-item
+   `fix/admin-stats-balance` branch first, per the human's preference).
 
 Deployment step still outstanding: set `COOKIE_SECURE=true` on HTTPS. For
 plain-HTTP local development add `COOKIE_SECURE=false` to the gitignored
@@ -644,8 +673,8 @@ plain-HTTP local development add `COOKIE_SECURE=false` to the gitignored
 proxy reads the non-secret `casino_session` marker cookie set by the API, which
 works because `localhost:3000` and `localhost:8000` are the same site.
 
-After the Sprint 12 PR is merged, the next work is the rest of the security
-review, in priority order:
+Once QA is signed off, the next work is the rest of the security review, in
+priority order:
 
 1. **Sprint 13 — auth hardening**
    - per-IP/per-email rate limits on sign-in, sign-up, refresh, verify-email
