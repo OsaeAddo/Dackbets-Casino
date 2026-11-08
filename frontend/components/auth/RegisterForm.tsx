@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,14 +10,31 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { EyeIcon, EyeOffIcon, Loader2Icon, CheckCircleIcon, XCircleIcon } from 'lucide-react';
 import Link from 'next/link';
 
+type RegisterField = 'email' | 'username' | 'password' | 'confirmPassword';
+
+// Hydration probe: the server snapshot is false, the client snapshot is true,
+// so the submit button stays disabled until React has attached the handler.
+const subscribeToNothing = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export default function RegisterForm() {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<Record<RegisterField, string>>({
     email: '',
     username: '',
     password: '',
     confirmPassword: ''
   });
-  
+
+  // The submit button stays disabled until React has hydrated the form.
+  // Before that point there is no `onSubmit` handler, so a click or Enter would
+  // fall back to the browser's native form submission.
+  const hydrated = useSyncExternalStore(
+    subscribeToNothing,
+    getClientSnapshot,
+    getServerSnapshot,
+  );
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -43,11 +60,10 @@ export default function RegisterForm() {
     });
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    
-    if (name === 'password') {
+  const handleChange = (field: RegisterField, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+
+    if (field === 'password') {
       validatePassword(value);
     }
   };
@@ -102,7 +118,10 @@ export default function RegisterForm() {
         </CardDescription>
       </CardHeader>
       
-      <form onSubmit={handleSubmit}>
+      {/* No `name` attributes: credentials must never be serialised into a
+          native form submission. `method="post"` keeps a fallback submission
+          out of the URL and browser history even if a name is added later. */}
+      <form onSubmit={handleSubmit} method="post">
         <CardContent className="space-y-4">
           {error && (
             <Alert variant="destructive">
@@ -114,11 +133,10 @@ export default function RegisterForm() {
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
-              name="email"
               type="email"
               placeholder="player@example.com"
               value={formData.email}
-              onChange={handleChange}
+              onChange={(e) => handleChange('email', e.target.value)}
               required
               disabled={isLoading}
               autoComplete="email"
@@ -129,11 +147,10 @@ export default function RegisterForm() {
             <Label htmlFor="username">Username (Optional)</Label>
             <Input
               id="username"
-              name="username"
               type="text"
               placeholder="Player123"
               value={formData.username}
-              onChange={handleChange}
+              onChange={(e) => handleChange('username', e.target.value)}
               disabled={isLoading}
               autoComplete="username"
             />
@@ -144,11 +161,10 @@ export default function RegisterForm() {
             <div className="relative">
               <Input
                 id="password"
-                name="password"
                 type={showPassword ? 'text' : 'password'}
                 placeholder="••••••••"
                 value={formData.password}
-                onChange={handleChange}
+                onChange={(e) => handleChange('password', e.target.value)}
                 required
                 disabled={isLoading}
                 autoComplete="new-password"
@@ -204,11 +220,10 @@ export default function RegisterForm() {
             <div className="relative">
               <Input
                 id="confirmPassword"
-                name="confirmPassword"
                 type={showConfirmPassword ? 'text' : 'password'}
                 placeholder="••••••••"
                 value={formData.confirmPassword}
-                onChange={handleChange}
+                onChange={(e) => handleChange('confirmPassword', e.target.value)}
                 required
                 disabled={isLoading}
                 autoComplete="new-password"
@@ -244,7 +259,7 @@ export default function RegisterForm() {
           <Button 
             type="submit" 
             className="w-full" 
-            disabled={isLoading}
+            disabled={isLoading || !hydrated}
           >
             {isLoading ? (
               <>
